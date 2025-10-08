@@ -1,22 +1,23 @@
-*.class
-*.log
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-.idea/
+# sbt/Scala
 target/
 project/target/
 project/project/
-.metals/
-.bloop/
-.vscode/
-scratch*/ 
-scratches/
-.DS_Store
+project/metals.sbt
+
+# BSP / build servers
+.bsp/
+sbt.json
+
+# IntelliJ / IDEs
+.idea/
 *.iml
-*.class
+.out/
+.vscode/
+.bloop/
+.metals/
+
+# OS cruft
+.DS_Store
+Thumbs.db
 *.log
 *.swp
-/out/
-/external-libraries/
-
