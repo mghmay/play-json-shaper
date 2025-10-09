@@ -1,0 +1,156 @@
+/*
+ * Copyright 2025 io.github.mghmay
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+package io.github.mghmay.shaper
+
+import play.api.libs.json._
+
+/** Low-level helpers for shaping Play JSON JsObjects. These power the public Shaper API and can be reused if
+  * needed.
+  */
+trait JsonHelpers {
+
+  import JsonHelpers._
+
+  /** Move the JSON node at `from` to `to`, creating destination parents as needed.
+    *
+    * Semantics
+    *   - Strict: fails if `from` does not resolve to a single value.
+    *   - Destination: writes the captured value at `to` (overwrites if present). No pruning at destination.
+    *   - Source cleanup:
+    *     - [[SourceCleanup.Aggressive]]: remove the moved key and recursively prune empty parents.
+    *     - [[SourceCleanup.Tombstone]] : set a `null` tombstone at the exact `from` path (parents unchanged).
+    *
+    * Overlapping paths are well-defined (capture → cleanup → set). If `to` is a descendant of `from` and
+    * cleanup is Tombstone, the tombstone may be replaced when writing to `to` (parents are recreated).
+    */
+  final def movePath(
+      from: JsPath,
+      to: JsPath,
+      json: JsObject,
+      cleanup: SourceCleanup = SourceCleanup.Aggressive
+  ): Either[JsError, JsObject] = {
+    if (from == to) Right(json)
+    else
+      from.asSingleJson(json) match {
+        case JsDefined(value) =>
+          val afterSource: Either[JsError, JsObject] = cleanup match {
+            case SourceCleanup.Aggressive => aggressivePrunePath(from, json)
+            case SourceCleanup.Tombstone  => setNestedPath(from, JsNull, json)
+          }
+
+          afterSource.flatMap(withoutOld => setNestedPath(to, value, withoutOld))
+
+        case _: JsUndefined =>
+          Left(
+            JsError(
+              Seq(from -> Seq(
+                JsonValidationError(s"movePath: source '$from' not found or not unique; target='$to'")))
+            )
+          )
+      }
+  }
+
+  /** Remove value at path and any empty parent objects. Fails if any segment is unsupported (e.g.
+    * IdxPathNode) or the path doesn't exist.
+    */
+  final def aggressivePrunePath(path: JsPath, json: JsObject): Either[JsError, JsObject] = {
+    def loop(cur: JsObject, nodes: List[PathNode]): Either[JsError, JsObject] = nodes match {
+      case KeyPathNode(k) :: Nil =>
+        if (cur.keys.contains(k)) Right(cur - k)
+        else Left(JsError(Seq(path -> Seq(JsonValidationError("prune: path not found")))))
+
+      case KeyPathNode(parent) :: rest =>
+        (cur \ parent).toOption match {
+          case Some(child: JsObject) =>
+            loop(child, rest).map { prunedChild =>
+              if (prunedChild.value.isEmpty) cur - parent else cur + (parent -> prunedChild)
+            }
+          case Some(_)               =>
+            Left(JsError(Seq(path -> Seq(JsonValidationError(s"prune: expected object at '$parent'")))))
+          case None                  =>
+            Left(JsError(Seq(path -> Seq(JsonValidationError("prune: path not found")))))
+        }
+
+      case _ =>
+        Left(JsError(
+            Seq(path -> Seq(JsonValidationError("prune: unsupported path segment (arrays not supported)")))))
+    }
+
+    path.path match {
+      case Nil => Left(JsError(Seq(path -> Seq(JsonValidationError("prune: empty path")))))
+      case ns  => loop(json, ns)
+    }
+  }
+
+  /** Gentle prune: removes the node, keeps now-empty parents intact. Fails if the path does not exist or
+    * contains unsupported segments.
+    */
+  final def gentlePrunePath(path: JsPath, json: JsObject): Either[JsError, JsObject] = {
+    path.asSingleJson(json) match {
+      case _: JsUndefined =>
+        Left(JsError(Seq(path -> Seq(JsonValidationError("prune: path not found")))))
+      case JsDefined(_)   =>
+        path.prune(json) match {
+          case JsSuccess(updated, _) => Right(updated)
+          case JsError(_)            =>
+            Left(JsError(Seq(path -> Seq(
+                  JsonValidationError("prune: path not found or unsupported (arrays not supported)")
+                ))))
+        }
+    }
+  }
+
+  /** Deep-merge a JsObject at path, creating parents as needed. Fails with JsError if the path contains array
+    * indices (IdxPathNode).
+    */
+  final def deepMergeAt(json: JsObject, path: JsPath, value: JsObject): Either[JsError, JsObject] = {
+    val hasArraySeg = path.path.exists {
+      case _: IdxPathNode => true
+      case _              => false
+    }
+    if (hasArraySeg)
+      Left(JsError(Seq(path -> Seq(
+            JsonValidationError("deepMergeAt: array segments (IdxPathNode) not supported at this time")))))
+    else {
+      def loop(current: JsObject, nodes: List[PathNode]): JsObject = nodes match {
+        case Nil                    =>
+          current.deepMerge(value)
+        case KeyPathNode(k) :: tail =>
+          val child = (current \ k).toOption.collect { case o: JsObject => o }.getOrElse(Json.obj())
+          current + (k -> loop(child, tail))
+        case _                      =>
+          current
+      }
+      Right(loop(json, path.path))
+    }
+  }
+
+  /** Recursive set that builds parent objects as needed. */
+  final def setNestedPath(path: JsPath, value: JsValue, json: JsObject): Either[JsError, JsObject] =
+    path.path match {
+      case Nil                    => Right(json)
+      case KeyPathNode(k) :: Nil  => Right(json + (k -> value))
+      case KeyPathNode(h) :: tail =>
+        val child = (json \ h).toOption.collect { case o: JsObject => o }.getOrElse(Json.obj())
+        setNestedPath(JsPath(tail), value, child).map { nested =>
+          val rebuilt = json + (h -> nested)
+          if (nested.value.isEmpty) rebuilt - h else rebuilt
+        }
+      case _                      =>
+        Left(JsError(
+            Seq(path -> Seq(JsonValidationError("set: unsupported path segment (arrays not supported)")))))
+    }
+}
+
+/** ADT for source-side cleanup policy when moving a node. */
+object JsonHelpers {
+  sealed trait SourceCleanup
+  object SourceCleanup {
+    case object Aggressive extends SourceCleanup
+    case object Tombstone  extends SourceCleanup
+  }
+}
