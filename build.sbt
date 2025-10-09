@@ -11,6 +11,7 @@ ThisBuild / scmInfo := Some(
     "scm:git@github.com:mghmay/play-json-shaper.git"
   )
 )
+headerLicenseStyle := HeaderLicenseStyle.SpdxSyntax
 Compile / headerSources ++= (Compile / sources).value
 Test / headerSources    ++= (Test / sources).value
 
