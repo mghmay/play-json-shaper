@@ -9,6 +9,7 @@ import io.github.mghmay.transformer.JsonHelpers.SourceCleanup
 import io.github.mghmay.transformer.{DefaultJsonHelpers, JsonTransform, JsonTransformOps}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import io.github.mghmay.transformer.syntax._
 import play.api.libs.json._
 
 final class JsonTransformSpec extends AnyFreeSpec with Matchers {
@@ -57,10 +58,10 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
       val in = Json.parse("""{ "a": { "name": "Ada" } }""").as[JsObject]
 
       val viaFor = for {
-        j1 <- JsonTransformOps.move(__ \ "a" \ "name", __ \ "person" \ "name")(in)
-        j2 <- JsonTransformOps.mapAt(__ \ "person" \ "name")(v =>
+        j1 <- move(__ \ "a" \ "name", __ \ "person" \ "name")(in)
+        j2 <- mapAt(__ \ "person" \ "name")(v =>
                 v.validate[String].map(n => JsString(n.reverse)))(j1)
-        j3 <- JsonTransformOps.mergeAt(__ \ "meta", Json.obj("ok" -> true))(j2)
+        j3 <- mergeAt(__ \ "meta", Json.obj("ok" -> true))(j2)
       } yield j3
 
       val viaFluent = JsonTransform
@@ -83,8 +84,8 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
         .build
 
       val f2 = JsonTransform(
-        JsonTransformOps.set(__ \ "x", JsNumber(2)),
-        JsonTransformOps.mergeAt(__ \ "ctx", Json.obj("v" -> 3)))
+        set(__ \ "x", JsNumber(2)),
+        mergeAt(__ \ "ctx", Json.obj("v" -> 3)))
 
       f1(in) mustBe f2(in)
     }
@@ -99,7 +100,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
 
     "andThen(transformer) appends a single step" in {
       val p   = JsonTransform.start.set(__ \ "a", JsNumber(1))
-      val p2  = p andThen JsonTransformOps.set(__ \ "b", JsNumber(2))
+      val p2  = p andThen set(__ \ "b", JsNumber(2))
       val out = p2.run(Json.obj()).toOption.get
       out mustBe Json.parse("""{ "a": 1, "b": 2 }""")
     }
@@ -137,7 +138,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
         (_: JsObject) => Left(JsError(__ \ "oops", JsonValidationError("boom")))
 
       val wouldSet =
-        JsonTransformOps.set(__ \ "shouldNotExist", JsBoolean(true))
+        set(__ \ "shouldNotExist", JsBoolean(true))
 
       val res = JsonTransform(failing, wouldSet)(in)
       res.isLeft mustBe true
@@ -167,7 +168,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
     "when(pred) applies step only when predicate is true" in {
       val in  = Json.obj("n" -> 2)
       val out = JsonTransform
-        .when(j => (j \ "n").asOpt[Int].exists(_ > 1))(JsonTransformOps.set(__ \ "flag", JsBoolean(true)))
+        .when(j => (j \ "n").asOpt[Int].exists(_ > 1))(set(__ \ "flag", JsBoolean(true)))
         .run(in)
         .toOption.get
 
@@ -177,7 +178,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
     "ifExists(path) runs step only when the path is present" in {
       val in  = Json.parse("""{ "old": "x", "other": 1 }""").as[JsObject]
       val out = JsonTransform
-        .ifExists(__ \ "old")(JsonTransformOps.move(__ \ "old", __ \ "new"))
+        .ifExists(__ \ "old")(move(__ \ "old", __ \ "new"))
         .run(in)
         .toOption.get
 
@@ -187,7 +188,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
     "ifMissing(path) sets default only when absent" in {
       val in  = Json.parse("""{ "ctx": { "env": "dev" } }""").as[JsObject]
       val out = JsonTransform
-        .ifMissing(__ \ "ctx" \ "version")(JsonTransformOps.mergeAt(__ \ "ctx", Json.obj("version" -> 1)))
+        .ifMissing(__ \ "ctx" \ "version")(mergeAt(__ \ "ctx", Json.obj("version" -> 1)))
         .run(in)
         .toOption.get
 
@@ -199,9 +200,9 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
     }
 
     "composition is associative" in {
-      val a = JsonTransformOps.set(__ \ "a", JsNumber(1))
-      val b = JsonTransformOps.set(__ \ "b", JsNumber(2))
-      val c = JsonTransformOps.set(__ \ "c", JsNumber(3))
+      val a = set(__ \ "a", JsNumber(1))
+      val b = set(__ \ "b", JsNumber(2))
+      val c = set(__ \ "c", JsNumber(3))
 
       val left  = JsonTransform.start.andThen(JsonTransform.start.andThen(a).andThen(b)).andThen(c)
       val right = JsonTransform.start.andThen(a).andThen(JsonTransform.start.andThen(b).andThen(c))

@@ -6,6 +6,7 @@
 
 package io.github.mghmay.transformer
 
+import io.github.mghmay.transformer.JsonHelpers.SourceCleanup.Aggressive
 import play.api.libs.json._
 
 object DefaultJsonHelpers extends JsonHelpers
@@ -17,17 +18,17 @@ trait JsonHelpers {
 
   import JsonHelpers._
 
-  /** Move the JSON node at `from` to `to`, creating destination parents as needed.
+  /** Move the JSON node at 'from' to 'to', creating destination parents as needed.
     *
     * Semantics
-    *   - Strict: fails if `from` does not resolve to a single value.
-    *   - Destination: writes the captured value at `to` (overwrites if present). No pruning at destination.
+    *   - Strict: fails if 'from' does not resolve to a single value.
+    *   - Destination: writes the captured value at 'to' (overwrites if present). No pruning at destination.
     *   - Source cleanup:
     *     - [[SourceCleanup.Aggressive]]: remove the moved key and recursively prune empty parents.
-    *     - [[SourceCleanup.Tombstone]] : set a `null` tombstone at the exact `from` path (parents unchanged).
+    *     - [[SourceCleanup.Tombstone]] : set a 'null' tombstone at the exact 'from' path (parents unchanged).
     *
-    * Overlapping paths are well-defined (capture → cleanup → set). If `to` is a descendant of `from` and
-    * cleanup is Tombstone, the tombstone may be replaced when writing to `to` (parents are recreated).
+    * Overlapping paths are well-defined (capture, cleanup, set). If 'to' is a descendant of 'from' and
+    * cleanup is Tombstone, the tombstone may be replaced when writing to 'to' (parents are recreated).
     */
   final def movePath(
       from: JsPath,
@@ -56,9 +57,9 @@ trait JsonHelpers {
       }
   }
 
-  /** Copy the JSON node at `from` to `to`, creating destination parents as needed.
+  /** Copy the JSON node at 'from' to 'to', creating destination parents as needed.
    *
-   * If `to` is a descendant of `from`, the write proceeds and source parents remain untouched.
+   * If 'to' is a descendant of 'from', the write proceeds and source parents remain untouched.
    */
   final def copyPath(from: JsPath, to: JsPath, json: JsObject): Either[JsError, JsObject] =
     if (from == to) Right(json)
@@ -71,7 +72,7 @@ trait JsonHelpers {
           )))))
       }
 
-  /** Transform the value at `path` using a validator/mapping function `vf`.
+  /** Transform the value at 'path' using a validator/mapping function 'vf'.
    *
    * @param path Path of the node to transform. Must resolve to a single value.
    * @param json Input object.
@@ -143,6 +144,9 @@ trait JsonHelpers {
     }
   }
 
+  private def getChildObj(current: JsObject, k: String) =
+    (current \ k).toOption.collect { case o: JsObject => o }.getOrElse(Json.obj())
+
   /** Deep-merge a JsObject at path, creating parents as needed. Fails with JsError if the path contains array
     * indices (IdxPathNode).
     */
@@ -159,7 +163,7 @@ trait JsonHelpers {
         case Nil                    =>
           current.deepMerge(value)
         case KeyPathNode(k) :: tail =>
-          val child = (current \ k).toOption.collect { case o: JsObject => o }.getOrElse(Json.obj())
+          val child = getChildObj(current, k)
           current + (k -> loop(child, tail))
         case _                      =>
           current
@@ -174,7 +178,7 @@ trait JsonHelpers {
       case Nil                    => Right(json)
       case KeyPathNode(k) :: Nil  => Right(json + (k -> value))
       case KeyPathNode(h) :: tail =>
-        val child = (json \ h).toOption.collect { case o: JsObject => o }.getOrElse(Json.obj())
+        val child = getChildObj(json, h)
         setNestedPath(JsPath(tail), value, child).map { nested =>
           val rebuilt = json + (h -> nested)
           if (nested.value.isEmpty) rebuilt - h else rebuilt

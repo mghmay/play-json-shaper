@@ -81,4 +81,5 @@ Both methods return `Either[JsError, JsObject]` for predictable failure handling
 - Filter out non-object intermediary values (enforce stricter parent types)
 - Add support for array paths (`IdxPathNode`)
 - Add transformation combinators (e.g. `copyPath`, `renamePath`, batch moves)
-- Introduce a higher-level DSL for composable JSON shaping
+- Add a way to deal with enums and perhaps map them
+- For very large pipelines, the current foldLeft approach creates intermediate functions. For extreme performance, it could be compiled to a single function

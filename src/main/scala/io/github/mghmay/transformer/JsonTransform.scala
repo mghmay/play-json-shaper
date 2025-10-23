@@ -1,6 +1,7 @@
 package io.github.mghmay.transformer
 
 import JsonHelpers.SourceCleanup
+import io.github.mghmay.transformer.JsonHelpers.SourceCleanup.Aggressive
 import play.api.libs.json._
 
 /**
@@ -55,7 +56,7 @@ object JsonTransform {
   /**
    * Adds a move operation to the pipeline.
    *
-   * @see [[JsonTransformOps.move]]
+   * @see [[syntax.move]]
    */
   def move(from: JsPath, to: JsPath, cleanup: SourceCleanup = SourceCleanup.Aggressive): PipelineBuilder =
     start.move(from, to, cleanup)
@@ -63,7 +64,7 @@ object JsonTransform {
   /**
    * Adds a copy operation to the pipeline.
    *
-   * @see [[JsonTransformOps.copy]]
+   * @see [[syntax.copy]]
    */
   def copy(from: JsPath, to: JsPath): PipelineBuilder =
     start.copy(from, to)
@@ -71,7 +72,7 @@ object JsonTransform {
   /**
    * Adds a set operation to the pipeline.
    *
-   * @see [[JsonTransformOps.set]]
+   * @see [[syntax.set]]
    */
   def set(path: JsPath, value: JsValue): PipelineBuilder =
     start.set(path, value)
@@ -79,7 +80,7 @@ object JsonTransform {
   /**
    * Adds a merge operation to the pipeline.
    *
-   * @see [[JsonTransformOps.mergeAt]]
+   * @see [[syntax.mergeAt]]
    */
   def mergeAt(path: JsPath, obj: JsObject): PipelineBuilder =
     start.mergeAt(path, obj)
@@ -87,7 +88,7 @@ object JsonTransform {
   /**
    * Adds an aggressive prune operation to the pipeline.
    *
-   * @see [[JsonTransformOps.pruneAggressive]]
+   * @see [[syntax.pruneAggressive]]
    */
   def pruneAggressive(path: JsPath): PipelineBuilder =
     start.pruneAggressive(path)
@@ -95,7 +96,7 @@ object JsonTransform {
   /**
    * Adds a gentle prune operation to the pipeline.
    *
-   * @see [[JsonTransformOps.pruneGentle]]
+   * @see [[syntax.pruneGentle]]
    */
   def pruneGentle(path: JsPath): PipelineBuilder =
     start.pruneGentle(path)
@@ -103,7 +104,7 @@ object JsonTransform {
   /**
    * Adds a rename operation to the pipeline.
    *
-   * @see [[JsonTransformOps.rename]]
+   * @see [[syntax.rename]]
    */
   def rename(from: JsPath, to: JsPath): PipelineBuilder =
     start.rename(from, to)
@@ -111,7 +112,7 @@ object JsonTransform {
   /**
    * Adds a map operation to the pipeline.
    *
-   * @see [[JsonTransformOps.mapAt]]
+   * @see [[syntax.mapAt]]
    */
   def mapAt(path: JsPath)(vf: JsValue => JsResult[JsValue]): PipelineBuilder =
     start.mapAt(path)(vf)
@@ -119,7 +120,7 @@ object JsonTransform {
   /**
    * Adds a conditional operation to the pipeline.
    *
-   * @see [[JsonTransformOps.when]]
+   * @see [[syntax.when]]
    */
   def when(pred: JsObject => Boolean)(step: Transformer): PipelineBuilder =
     start.when(pred)(step)
@@ -127,7 +128,7 @@ object JsonTransform {
   /**
    * Adds an existence check operation to the pipeline.
    *
-   * @see [[JsonTransformOps.ifExists]]
+   * @see [[syntax.ifExists]]
    */
   def ifExists(path: JsPath)(step: Transformer): PipelineBuilder =
     start.ifExists(path)(step)
@@ -135,7 +136,7 @@ object JsonTransform {
   /**
    * Adds a missing check operation to the pipeline.
    *
-   * @see [[JsonTransformOps.ifMissing]]
+   * @see [[syntax.ifMissing]]
    */
   def ifMissing(path: JsPath)(step: Transformer): PipelineBuilder =
     start.ifMissing(path)(step)
@@ -162,7 +163,7 @@ final class PipelineBuilder(private val steps: Vector[Transformer]) {
   /**
    * Adds a move operation to the pipeline.
    *
-   * @see [[JsonTransformOps.move]]
+   * @see [[syntax.move]]
    */
   def move(from: JsPath, to: JsPath, cleanup: SourceCleanup = SourceCleanup.Aggressive): PipelineBuilder =
     andThen(JsonTransformOps.move(from, to, cleanup))
@@ -170,7 +171,7 @@ final class PipelineBuilder(private val steps: Vector[Transformer]) {
   /**
    * Adds a copy operation to the pipeline.
    *
-   * @see [[JsonTransformOps.copy]]
+   * @see [[syntax.copy]]
    */
   def copy(from: JsPath, to: JsPath): PipelineBuilder =
     andThen(JsonTransformOps.copy(from, to))
@@ -178,7 +179,7 @@ final class PipelineBuilder(private val steps: Vector[Transformer]) {
   /**
    * Adds a set operation to the pipeline.
    *
-   * @see [[JsonTransformOps.set]]
+   * @see [[syntax.set]]
    */
   def set(path: JsPath, value: JsValue): PipelineBuilder =
     andThen(JsonTransformOps.set(path, value))
@@ -186,7 +187,7 @@ final class PipelineBuilder(private val steps: Vector[Transformer]) {
   /**
    * Adds a merge operation to the pipeline.
    *
-   * @see [[JsonTransformOps.mergeAt]]
+   * @see [[syntax.mergeAt]]
    */
   def mergeAt(path: JsPath, obj: JsObject): PipelineBuilder =
     andThen(JsonTransformOps.mergeAt(path, obj))
@@ -194,7 +195,7 @@ final class PipelineBuilder(private val steps: Vector[Transformer]) {
   /**
    * Adds an aggressive prune operation to the pipeline.
    *
-   * @see [[JsonTransformOps.pruneAggressive]]
+   * @see [[syntax.pruneAggressive]]
    */
   def pruneAggressive(path: JsPath): PipelineBuilder =
     andThen(JsonTransformOps.pruneAggressive(path))
@@ -202,7 +203,7 @@ final class PipelineBuilder(private val steps: Vector[Transformer]) {
   /**
    * Adds a gentle prune operation to the pipeline.
    *
-   * @see [[JsonTransformOps.pruneGentle]]
+   * @see [[syntax.pruneGentle]]
    */
   def pruneGentle(path: JsPath): PipelineBuilder =
     andThen(JsonTransformOps.pruneGentle(path))
@@ -210,7 +211,7 @@ final class PipelineBuilder(private val steps: Vector[Transformer]) {
   /**
    * Adds a rename operation to the pipeline.
    *
-   * @see [[JsonTransformOps.rename]]
+   * @see [[syntax.rename]]
    */
   def rename(from: JsPath, to: JsPath): PipelineBuilder =
     andThen(JsonTransformOps.rename(from, to))
@@ -218,7 +219,7 @@ final class PipelineBuilder(private val steps: Vector[Transformer]) {
   /**
    * Adds a map operation to the pipeline.
    *
-   * @see [[JsonTransformOps.mapAt]]
+   * @see [[syntax.mapAt]]
    */
   def mapAt(path: JsPath)(vf: JsValue => JsResult[JsValue]): PipelineBuilder =
     andThen(JsonTransformOps.mapAt(path)(vf))
@@ -226,7 +227,7 @@ final class PipelineBuilder(private val steps: Vector[Transformer]) {
   /**
    * Adds a conditional operation to the pipeline.
    *
-   * @see [[JsonTransformOps.when]]
+   * @see [[syntax.when]]
    */
   def when(pred: JsObject => Boolean)(step: Transformer): PipelineBuilder =
     andThen(JsonTransformOps.when(pred)(step))
@@ -234,7 +235,7 @@ final class PipelineBuilder(private val steps: Vector[Transformer]) {
   /**
    * Adds an existence check operation to the pipeline.
    *
-   * @see [[JsonTransformOps.ifExists]]
+   * @see [[syntax.ifExists]]
    */
   def ifExists(path: JsPath)(step: Transformer): PipelineBuilder =
     andThen(JsonTransformOps.ifExists(path)(step))
@@ -242,10 +243,10 @@ final class PipelineBuilder(private val steps: Vector[Transformer]) {
   /**
    * Adds a missing check operation to the pipeline.
    *
-   * @see [[JsonTransformOps.ifMissing]]
+   * @see [[syntax.ifMissing]]
    */
   def ifMissing(path: JsPath)(step: Transformer): PipelineBuilder =
-    andThen(JsonTransformOps.ifMissing(path)(step))
+    andThen(syntax.ifMissing(path)(step))
 
   /**
    * Builds the final transformer from this pipeline.
