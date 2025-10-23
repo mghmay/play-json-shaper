@@ -1,3 +1,9 @@
+/*
+ * Copyright 2025 Mathew May
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 package io.github.mghmay
 
 import play.api.libs.json.{JsError, JsObject}

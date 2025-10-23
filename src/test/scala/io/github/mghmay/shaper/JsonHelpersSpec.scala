@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Mathew May
+ *
  * SPDX-License-Identifier: MIT
  */
 

@@ -1,4 +1,4 @@
-ThisBuild / organizationName := "io.github.mghmay"
+ThisBuild / organizationName := "Mathew May"
 ThisBuild / startYear := Some(2025)
 ThisBuild / scalaVersion := "2.13.14"
 ThisBuild / crossScalaVersions := Seq("2.13.14", "3.3.4")

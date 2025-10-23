@@ -1,12 +1,11 @@
 /*
- * Copyright 2025 io.github.mghmay
+ * Copyright 2025 Mathew May
  *
  * SPDX-License-Identifier: MIT
  */
 
 package io.github.mghmay.transformer
 
-import io.github.mghmay.transformer.JsonHelpers.SourceCleanup.Aggressive
 import play.api.libs.json._
 
 object DefaultJsonHelpers extends JsonHelpers
