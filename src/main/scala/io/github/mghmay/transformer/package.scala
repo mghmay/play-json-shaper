@@ -7,4 +7,6 @@ package object transformer {
   /** A function that transforms a JsObject, returning either a transformed object or a JsError */
   type Transformer = JsObject => Either[JsError, JsObject]
 
+  val identity: Transformer = Right(_)
+
 }

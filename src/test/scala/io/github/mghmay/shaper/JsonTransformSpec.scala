@@ -6,14 +6,14 @@
 package io.github.mghmay.shaper
 
 import io.github.mghmay.transformer.JsonHelpers.SourceCleanup
-import io.github.mghmay.transformer.{DefaultJsonHelpers, JsonTransform, JsonTransformImpl, JsonTransformOps}
+import io.github.mghmay.transformer.{DefaultJsonHelpers, JsonTransform, JsonTransformOps}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.libs.json._
 
 final class JsonTransformSpec extends AnyFreeSpec with Matchers {
 
-  "Shaper (public API)" - {
+  "Transform" - {
 
     "start.run with no steps returns the input unchanged" in {
       val in  = Json.obj("a" -> 1, "b" -> Json.obj())
@@ -33,7 +33,6 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
         ).as[JsObject]
 
       val out = JsonTransform
-        .start
         .move(__ \ "old", __ \ "new")
         .mapAt(__ \ "new")(v => v.validate[String].map(s => JsString(s.toUpperCase)))
         .mergeAt(__ \ "ctx", Json.obj("version" -> 7))
@@ -64,7 +63,6 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
       } yield j3
 
       val viaFluent = JsonTransform
-        .start
         .move(__ \ "a" \ "name", __ \ "person" \ "name")
         .mapAt(__ \ "person" \ "name")(v => v.validate[String].map(n => JsString(n.reverse)))
         .mergeAt(__ \ "meta", Json.obj("ok" -> true))
@@ -79,7 +77,6 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
       val in = Json.obj("x" -> 1)
 
       val f1 = JsonTransform
-        .start
         .set(__ \ "x", JsNumber(2))
         .mergeAt(__ \ "ctx", Json.obj("v" -> 3))
         .build
@@ -151,7 +148,6 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
       val in = Json.obj("k" -> 1)
 
       val out = JsonTransform
-        .start
         .mergeAt(__, Json.obj("x" -> 10)) // merge at root
         .set(__ \ "k", JsNumber(99))
         .apply(in)
@@ -171,7 +167,6 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
     "when(pred) applies step only when predicate is true" in {
       val in  = Json.obj("n" -> 2)
       val out = JsonTransform
-        .start
         .when(j => (j \ "n").asOpt[Int].exists(_ > 1))(JsonTransformOps.set(__ \ "flag", JsBoolean(true)))
         .run(in)
         .toOption.get
@@ -182,7 +177,6 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
     "ifExists(path) runs step only when the path is present" in {
       val in  = Json.parse("""{ "old": "x", "other": 1 }""").as[JsObject]
       val out = JsonTransform
-        .start
         .ifExists(__ \ "old")(JsonTransformOps.move(__ \ "old", __ \ "new"))
         .run(in)
         .toOption.get
@@ -193,36 +187,26 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
     "ifMissing(path) sets default only when absent" in {
       val in  = Json.parse("""{ "ctx": { "env": "dev" } }""").as[JsObject]
       val out = JsonTransform
-        .start
         .ifMissing(__ \ "ctx" \ "version")(JsonTransformOps.mergeAt(__ \ "ctx", Json.obj("version" -> 1)))
         .run(in)
         .toOption.get
 
       out mustBe Json.parse("""{ "ctx": { "env": "dev", "version": 1 } }""")
     }
-  }
+    "empty pipeline is identity" in {
+      val in = Json.obj("x" -> 1)
+      JsonTransform.start.run(in) mustBe Right(in)
+    }
 
-  "pipeline built from a custom ShaperImpl uses its own helpers (not singleton)" in {
-    val custom = new JsonTransformImpl(DefaultJsonHelpers)
+    "composition is associative" in {
+      val a = JsonTransformOps.set(__ \ "a", JsNumber(1))
+      val b = JsonTransformOps.set(__ \ "b", JsNumber(2))
+      val c = JsonTransformOps.set(__ \ "c", JsNumber(3))
 
-    val in  = Json.obj("a" -> Json.obj("b" -> 1))
-    val out = custom.start.move(__ \ "a" \ "b", __ \ "x").run(in).toOption.get
+      val left  = JsonTransform.start.andThen(JsonTransform.start.andThen(a).andThen(b)).andThen(c)
+      val right = JsonTransform.start.andThen(a).andThen(JsonTransform.start.andThen(b).andThen(c))
 
-    out mustBe Json.parse("""{ "x": 1 }""")
-  }
-  "empty pipeline is identity" in {
-    val in = Json.obj("x" -> 1)
-    JsonTransform.start.run(in) mustBe Right(in)
-  }
-
-  "composition is associative" in {
-    val a = JsonTransformOps.set(__ \ "a", JsNumber(1))
-    val b = JsonTransformOps.set(__ \ "b", JsNumber(2))
-    val c = JsonTransformOps.set(__ \ "c", JsNumber(3))
-
-    val left  = JsonTransform.start.andThen(JsonTransform.start.andThen(a).andThen(b)).andThen(c)
-    val right = JsonTransform.start.andThen(a).andThen(JsonTransform.start.andThen(b).andThen(c))
-
-    left.run(Json.obj()) mustBe right.run(Json.obj())
+      left.run(Json.obj()) mustBe right.run(Json.obj())
+    }
   }
 }
