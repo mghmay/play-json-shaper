@@ -47,6 +47,19 @@ class ShaperApi(private val H: JsonHelpers) {
           }
       }
 
+  /** Conditionally run a step; otherwise return input unchanged. */
+  def when(pred: JsObject => Boolean)(step: TransformerStep): TransformerStep =
+    (json: JsObject) => if (pred(json)) step(json) else Right(json)
+
+  /** Run only if `path` resolves to a single value (like asSingleJson isDefined). */
+  def ifExists(path: JsPath)(step: TransformerStep): TransformerStep =
+    when(json => path.asSingleJson(json).isDefined)(step)
+
+  /** Run only if `path` is missing (or not uniquely addressed). */
+  def ifMissing(path: JsPath)(step: TransformerStep): TransformerStep =
+    when(json => path.asSingleJson(json).isEmpty)(step)
+
+
   final case class Pipeline(private val steps: Vector[TransformerStep]) {
 
     def andThen(other: Pipeline): Pipeline = Pipeline(steps ++ other.steps)
@@ -77,9 +90,19 @@ class ShaperApi(private val H: JsonHelpers) {
     def mapAt(path: JsPath)(vf: JsValue => JsResult[JsValue]): Pipeline =
       step(Shaper.thisApi.mapAt(path)(vf))
 
+    def when(pred: JsObject => Boolean)(build: ShaperApi => TransformerStep): Pipeline =
+      step(Shaper.thisApi.when(pred)(build(Shaper.thisApi)))
+
+    def ifExists(path: JsPath)(build: ShaperApi => TransformerStep): Pipeline =
+      step(Shaper.thisApi.ifExists(path)(build(Shaper.thisApi)))
+
+    def ifMissing(path: JsPath)(build: ShaperApi => TransformerStep): Pipeline =
+      step(Shaper.thisApi.ifMissing(path)(build(Shaper.thisApi)))
+
     def toStep: TransformerStep = Shaper.thisApi.pipeline(steps)
 
     def run(json: JsObject): Either[JsError, JsObject] = toStep(json)
+
   }
 }
 
