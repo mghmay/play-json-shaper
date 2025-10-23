@@ -54,6 +54,18 @@ trait JsonHelpers {
       }
   }
 
+  final def copyPath(from: JsPath, to: JsPath, json: JsObject): Either[JsError, JsObject] =
+    if (from == to) Right(json)
+    else
+      from.asSingleJson(json) match {
+        case JsDefined(value) => setNestedPath(to, value, json)
+        case _: JsUndefined   =>
+          Left(JsError(Seq(from -> Seq(JsonValidationError(
+            s"copyPath: source '$from' not found or not unique; target='$to'"
+          )))))
+      }
+
+
   /** Remove value at path and any empty parent objects. Fails if any segment is unsupported (e.g.
     * IdxPathNode) or the path doesn't exist.
     */

@@ -129,6 +129,41 @@ class JsonHelpersSpec extends AnyFreeSpec with Matchers with JsonHelpers {
       }
     }
 
+    "copyPath" - {
+
+      "copy keeps source intact and writes destination" in {
+        val in  = Json.parse("""{ "a": { "b": 1 } }""").as[JsObject]
+        val out = Shaper.start.copy(__ \ "a" \ "b", __ \ "x").run(in).toOption.get
+        out mustBe Json.parse("""{ "a": { "b": 1 }, "x": 1 }""")
+      }
+
+      "copy creates destination parents as needed" in {
+        val in  = Json.parse("""{ "a": { "b": 1 } }""").as[JsObject]
+        val out = Shaper.start.copy(__ \ "a" \ "b", __ \ "dest" \ "inner").run(in).toOption.get
+        out mustBe Json.parse("""{ "a": { "b": 1 }, "dest": { "inner": 1 } }""")
+      }
+
+      "copy overwrites an existing destination value" in {
+        val in  = Json.parse("""{ "a": { "b": 1 }, "x": 999 }""").as[JsObject]
+        val out = Shaper.start.copy(__ \ "a" \ "b", __ \ "x").run(in).toOption.get
+        out mustBe Json.parse("""{ "a": { "b": 1 }, "x": 1 }""")
+      }
+
+      "copy fails with JsError when source path does not exist (error anchored at source)" in {
+        val in  = Json.parse("""{ "a": 1 }""").as[JsObject]
+        val res = Shaper.start.copy(__ \ "missing", __ \ "x").run(in)
+        res.isLeft mustBe true
+        res.left.get.errors.head._1 mustBe (__ \ "missing")
+      }
+
+      "copy is a no-op when from == to" in {
+        val in  = Json.parse("""{ "a": { "b": 1 } }""").as[JsObject]
+        val out = Shaper.start.copy(__ \ "a" \ "b", __ \ "a" \ "b").run(in)
+        out mustBe Right(in)
+      }
+    }
+
+
     "aggressivePrunePath" - {
 
       "removes a nested key and prunes empty parents" in {
