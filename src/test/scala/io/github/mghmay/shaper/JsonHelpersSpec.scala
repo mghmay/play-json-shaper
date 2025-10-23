@@ -5,12 +5,13 @@
 
 package io.github.mghmay.shaper
 
+import io.github.mghmay.shaper.DefaultJsonHelpers._
 import io.github.mghmay.shaper.JsonHelpers.SourceCleanup
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.libs.json._
 
-class JsonHelpersSpec extends AnyFreeSpec with Matchers with JsonHelpers {
+class JsonHelpersSpec extends AnyFreeSpec with Matchers {
 
   "JsonHelpers" - {
 

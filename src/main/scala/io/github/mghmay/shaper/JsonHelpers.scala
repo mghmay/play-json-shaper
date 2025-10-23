@@ -56,6 +56,10 @@ trait JsonHelpers {
       }
   }
 
+  /** Copy the JSON node at `from` to `to`, creating destination parents as needed.
+   *
+   * If `to` is a descendant of `from`, the write proceeds and source parents remain untouched.
+   */
   final def copyPath(from: JsPath, to: JsPath, json: JsObject): Either[JsError, JsObject] =
     if (from == to) Right(json)
     else
@@ -67,6 +71,27 @@ trait JsonHelpers {
           )))))
       }
 
+  /** Transform the value at `path` using a validator/mapping function `vf`.
+   *
+   * @param path Path of the node to transform. Must resolve to a single value.
+   * @param json Input object.
+   * @param vf   Function that takes the current JsValue and returns the replacement JsValue or a JsError.
+   */
+  final def mapAt(
+                   path: JsPath,
+                   json: JsObject
+                 )(vf: JsValue => JsResult[JsValue]): Either[JsError, JsObject] =
+    path.asSingleJson(json) match {
+      case _: JsUndefined =>
+        Left(JsError(Seq(path -> Seq(JsonValidationError("mapAt: path not found or not unique")))))
+      case JsDefined(v)   =>
+        vf(v) match {
+          case JsSuccess(next, _) => setNestedPath(path, next, json)
+          case JsError(errs)      =>
+            val prefixed = errs.map { case (p, es) => (path ++ p, es) }
+            Left(JsError(prefixed))
+        }
+    }
 
   /** Remove value at path and any empty parent objects. Fails if any segment is unsupported (e.g.
     * IdxPathNode) or the path doesn't exist.

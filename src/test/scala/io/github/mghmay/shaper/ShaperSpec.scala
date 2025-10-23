@@ -49,9 +49,9 @@ final class ShaperSpec extends AnyFreeSpec with Matchers with JsonHelpers {
       val in = Json.parse("""{ "a": { "name": "Ada" } }""").as[JsObject]
 
       val viaFor = for {
-        j1 <- move(__ \ "a" \ "name", __ \ "person" \ "name")(in)
-        j2 <- mapAt(__ \ "person" \ "name")(v => v.validate[String].map(n => JsString(n.reverse)))(j1)
-        j3 <- mergeAt(__ \ "meta", Json.obj("ok" -> true))(j2)
+        j1 <- Shaper.move(__ \ "a" \ "name", __ \ "person" \ "name")(in)
+        j2 <- Shaper.mapAt(__ \ "person" \ "name")(v => v.validate[String].map(n => JsString(n.reverse)))(j1)
+        j3 <- Shaper.mergeAt(__ \ "meta", Json.obj("ok" -> true))(j2)
       } yield j3
 
       val viaFluent = Shaper

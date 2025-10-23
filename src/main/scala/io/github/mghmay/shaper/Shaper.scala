@@ -34,18 +34,7 @@ class ShaperApi(private val H: JsonHelpers) {
     move(from, to, SourceCleanup.Aggressive)
 
   def mapAt(path: JsPath)(vf: JsValue => JsResult[JsValue]): TransformerStep =
-    (json: JsObject) =>
-      path.asSingleJson(json) match {
-        case _: JsUndefined =>
-          Left(JsError(Seq(path -> Seq(JsonValidationError("mapAt: path not found or not unique")))))
-        case JsDefined(v)   =>
-          vf(v) match {
-            case JsSuccess(next, _) => H.setNestedPath(path, next, json)
-            case JsError(errs)      =>
-              val prefixed = errs.map { case (p, es) => (path ++ p, es) }
-              Left(JsError(prefixed))
-          }
-      }
+    (json: JsObject) => H.mapAt(path, json)(vf)
 
   /** Conditionally run a step; otherwise return input unchanged. */
   def when(pred: JsObject => Boolean)(step: TransformerStep): TransformerStep =
