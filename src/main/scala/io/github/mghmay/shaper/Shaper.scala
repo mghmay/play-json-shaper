@@ -53,40 +53,40 @@ class ShaperApi(private val H: JsonHelpers) {
 
     def andThen(other: Pipeline): Pipeline = Pipeline(steps ++ other.steps)
 
-    def step(f: TransformerStep): Pipeline = Pipeline(steps :+ f)
+    def pipe(f: TransformerStep): Pipeline = Pipeline(steps :+ f)
 
     def move(from: JsPath, to: JsPath, cleanup: SourceCleanup = SourceCleanup.Aggressive): Pipeline =
-      step(Shaper.thisApi.move(from, to, cleanup))
+      pipe(Shaper.thisApi.move(from, to, cleanup))
 
     def copy(from: JsPath, to: JsPath): Pipeline =
-      step(Shaper.thisApi.copy(from, to))
+      pipe(Shaper.thisApi.copy(from, to))
 
     def set(path: JsPath, value: JsValue): Pipeline =
-      step(Shaper.thisApi.set(path, value))
+      pipe(Shaper.thisApi.set(path, value))
 
     def mergeAt(path: JsPath, obj: JsObject): Pipeline =
-      step(Shaper.thisApi.mergeAt(path, obj))
+      pipe(Shaper.thisApi.mergeAt(path, obj))
 
     def pruneAggressive(path: JsPath): Pipeline =
-      step(Shaper.thisApi.pruneAggressive(path))
+      pipe(Shaper.thisApi.pruneAggressive(path))
 
     def pruneGentle(path: JsPath): Pipeline =
-      step(Shaper.thisApi.pruneGentle(path))
+      pipe(Shaper.thisApi.pruneGentle(path))
 
     def rename(from: JsPath, to: JsPath): Pipeline =
-      step(Shaper.thisApi.rename(from, to))
+      pipe(Shaper.thisApi.rename(from, to))
 
     def mapAt(path: JsPath)(vf: JsValue => JsResult[JsValue]): Pipeline =
-      step(Shaper.thisApi.mapAt(path)(vf))
+      pipe(Shaper.thisApi.mapAt(path)(vf))
 
     def when(pred: JsObject => Boolean)(build: ShaperApi => TransformerStep): Pipeline =
-      step(Shaper.thisApi.when(pred)(build(Shaper.thisApi)))
+      pipe(Shaper.thisApi.when(pred)(build(Shaper.thisApi)))
 
     def ifExists(path: JsPath)(build: ShaperApi => TransformerStep): Pipeline =
-      step(Shaper.thisApi.ifExists(path)(build(Shaper.thisApi)))
+      pipe(Shaper.thisApi.ifExists(path)(build(Shaper.thisApi)))
 
     def ifMissing(path: JsPath)(build: ShaperApi => TransformerStep): Pipeline =
-      step(Shaper.thisApi.ifMissing(path)(build(Shaper.thisApi)))
+      pipe(Shaper.thisApi.ifMissing(path)(build(Shaper.thisApi)))
 
     def toStep: TransformerStep = Shaper.thisApi.pipeline(steps)
 
