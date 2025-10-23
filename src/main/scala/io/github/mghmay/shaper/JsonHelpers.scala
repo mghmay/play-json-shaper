@@ -8,6 +8,8 @@ package io.github.mghmay.shaper
 
 import play.api.libs.json._
 
+object DefaultJsonHelpers extends JsonHelpers
+
 /** Low-level helpers for shaping Play JSON JsObjects. These power the public Shaper API and can be reused if
   * needed.
   */
