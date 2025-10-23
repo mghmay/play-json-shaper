@@ -25,14 +25,14 @@ object JsonTransform {
   /**
    * Alias for `compose` - composes multiple transformers into a single transformer.
    *
-   * @param steps The sequence of transformers to compose
+   * @param steps The varargs of transformers to compose
    * @return A single Transformer that executes all steps in sequence
    * @example {{{
    * val composed = JsonTransform(Seq(transformer1, transformer2, transformer3))
    * }}}
    */
-  def apply(steps: Seq[Transformer]): Transformer =
-    compose(steps)
+  def apply(steps: Transformer*): Transformer =
+    compose(steps.toVector)
 
   /**
    * A builder for creating transformation pipelines with a fluent API.
@@ -100,18 +100,43 @@ object JsonTransform {
   def pruneGentle(path: JsPath): PipelineBuilder =
     start.pruneGentle(path)
 
+  /**
+   * Adds a rename operation to the pipeline.
+   *
+   * @see [[JsonTransformOps.rename]]
+   */
   def rename(from: JsPath, to: JsPath): PipelineBuilder =
     start.rename(from, to)
 
+  /**
+   * Adds a map operation to the pipeline.
+   *
+   * @see [[JsonTransformOps.mapAt]]
+   */
   def mapAt(path: JsPath)(vf: JsValue => JsResult[JsValue]): PipelineBuilder =
     start.mapAt(path)(vf)
 
+  /**
+   * Adds a conditional operation to the pipeline.
+   *
+   * @see [[JsonTransformOps.when]]
+   */
   def when(pred: JsObject => Boolean)(step: Transformer): PipelineBuilder =
     start.when(pred)(step)
 
+  /**
+   * Adds an existence check operation to the pipeline.
+   *
+   * @see [[JsonTransformOps.ifExists]]
+   */
   def ifExists(path: JsPath)(step: Transformer): PipelineBuilder =
     start.ifExists(path)(step)
 
+  /**
+   * Adds a missing check operation to the pipeline.
+   *
+   * @see [[JsonTransformOps.ifMissing]]
+   */
   def ifMissing(path: JsPath)(step: Transformer): PipelineBuilder =
     start.ifMissing(path)(step)
 }

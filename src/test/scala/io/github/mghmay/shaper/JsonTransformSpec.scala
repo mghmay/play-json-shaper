@@ -58,7 +58,8 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
 
       val viaFor = for {
         j1 <- JsonTransformOps.move(__ \ "a" \ "name", __ \ "person" \ "name")(in)
-        j2 <- JsonTransformOps.mapAt(__ \ "person" \ "name")(v => v.validate[String].map(n => JsString(n.reverse)))(j1)
+        j2 <- JsonTransformOps.mapAt(__ \ "person" \ "name")(v =>
+                v.validate[String].map(n => JsString(n.reverse)))(j1)
         j3 <- JsonTransformOps.mergeAt(__ \ "meta", Json.obj("ok" -> true))(j2)
       } yield j3
 
@@ -81,10 +82,9 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
         .mergeAt(__ \ "ctx", Json.obj("v" -> 3))
         .build
 
-      val f2 = JsonTransform(Seq(
+      val f2 = JsonTransform(
         JsonTransformOps.set(__ \ "x", JsNumber(2)),
-        JsonTransformOps.mergeAt(__ \ "ctx", Json.obj("v" -> 3))
-        ))
+        JsonTransformOps.mergeAt(__ \ "ctx", Json.obj("v" -> 3)))
 
       f1(in) mustBe f2(in)
     }
@@ -99,7 +99,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
 
     "andThen(transformer) appends a single step" in {
       val p   = JsonTransform.start.set(__ \ "a", JsNumber(1))
-      val p2  = p.andThen(JsonTransformOps.set(__ \ "b", JsNumber(2)))
+      val p2  = p andThen JsonTransformOps.set(__ \ "b", JsNumber(2))
       val out = p2.run(Json.obj()).toOption.get
       out mustBe Json.parse("""{ "a": 1, "b": 2 }""")
     }
@@ -139,7 +139,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
       val wouldSet =
         JsonTransformOps.set(__ \ "shouldNotExist", JsBoolean(true))
 
-      val res = JsonTransform(Seq(failing, wouldSet))(in)
+      val res = JsonTransform(failing, wouldSet)(in)
       res.isLeft mustBe true
       res.left.get.errors.head._1 mustBe (__ \ "oops")
     }
