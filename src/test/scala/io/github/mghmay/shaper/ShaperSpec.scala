@@ -66,14 +66,13 @@ final class ShaperSpec extends AnyFreeSpec with Matchers with JsonHelpers {
       (viaFluent.toOption.get \ "meta" \ "ok").as[Boolean] mustBe true
     }
 
-    "pipeline.toStep equals pipeline(...) composition (observationally via same output)" in {
+    "pipeline.build equals pipeline(...) composition (observationally via same output)" in {
       val in = Json.obj("x" -> 1)
-      val p  = Shaper.start
-        .set(__ \ "x", JsNumber(2))
-        .mergeAt(__ \ "ctx", Json.obj("v" -> 3))
 
-      val f1 = p.toStep
-      val f2 = Shaper.pipeline(Seq(
+      val f1 = Shaper.start
+        .set(__ \ "x", JsNumber(2))
+        .mergeAt(__ \ "ctx", Json.obj("v" -> 3)).build
+      val f2 = Shaper(Seq(
           set(__ \ "x", JsNumber(2)),
           mergeAt(__ \ "ctx", Json.obj("v" -> 3))
         ))
@@ -114,13 +113,13 @@ final class ShaperSpec extends AnyFreeSpec with Matchers with JsonHelpers {
     "short-circuit: once a step fails, subsequent steps are not applied" in {
       val in = Json.obj()
 
-      val failing: TransformerStep =
+      val failing: Transformer =
         _ => Left(JsError(__ \ "oops", JsonValidationError("boom")))
 
-      val wouldSet: TransformerStep =
+      val wouldSet: Transformer =
         set(__ \ "shouldNotExist", JsBoolean(value = true))
 
-      val res = Shaper.pipeline(Seq(failing, wouldSet))(in)
+      val res = Shaper(Seq(failing, wouldSet))(in)
       res.isLeft mustBe true
 
       res.left.get.errors.head._1 mustBe (__ \ "oops")
