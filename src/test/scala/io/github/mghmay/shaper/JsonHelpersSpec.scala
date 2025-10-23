@@ -5,8 +5,9 @@
 
 package io.github.mghmay.shaper
 
-import io.github.mghmay.shaper.DefaultJsonHelpers._
-import io.github.mghmay.shaper.JsonHelpers.SourceCleanup
+import io.github.mghmay.transformer.DefaultJsonHelpers._
+import io.github.mghmay.transformer.JsonHelpers.SourceCleanup
+import io.github.mghmay.transformer.JsonTransform
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.libs.json._
@@ -134,32 +135,32 @@ class JsonHelpersSpec extends AnyFreeSpec with Matchers {
 
       "copy keeps source intact and writes destination" in {
         val in  = Json.parse("""{ "a": { "b": 1 } }""").as[JsObject]
-        val out = Shaper.start.copy(__ \ "a" \ "b", __ \ "x").run(in).toOption.get
+        val out = JsonTransform.start.copy(__ \ "a" \ "b", __ \ "x").run(in).toOption.get
         out mustBe Json.parse("""{ "a": { "b": 1 }, "x": 1 }""")
       }
 
       "copy creates destination parents as needed" in {
         val in  = Json.parse("""{ "a": { "b": 1 } }""").as[JsObject]
-        val out = Shaper.start.copy(__ \ "a" \ "b", __ \ "dest" \ "inner").run(in).toOption.get
+        val out = JsonTransform.start.copy(__ \ "a" \ "b", __ \ "dest" \ "inner").run(in).toOption.get
         out mustBe Json.parse("""{ "a": { "b": 1 }, "dest": { "inner": 1 } }""")
       }
 
       "copy overwrites an existing destination value" in {
         val in  = Json.parse("""{ "a": { "b": 1 }, "x": 999 }""").as[JsObject]
-        val out = Shaper.start.copy(__ \ "a" \ "b", __ \ "x").run(in).toOption.get
+        val out = JsonTransform.start.copy(__ \ "a" \ "b", __ \ "x").run(in).toOption.get
         out mustBe Json.parse("""{ "a": { "b": 1 }, "x": 1 }""")
       }
 
       "copy fails with JsError when source path does not exist (error anchored at source)" in {
         val in  = Json.parse("""{ "a": 1 }""").as[JsObject]
-        val res = Shaper.start.copy(__ \ "missing", __ \ "x").run(in)
+        val res = JsonTransform.start.copy(__ \ "missing", __ \ "x").run(in)
         res.isLeft mustBe true
         res.left.get.errors.head._1 mustBe (__ \ "missing")
       }
 
       "copy is a no-op when from == to" in {
         val in  = Json.parse("""{ "a": { "b": 1 } }""").as[JsObject]
-        val out = Shaper.start.copy(__ \ "a" \ "b", __ \ "a" \ "b").run(in)
+        val out = JsonTransform.start.copy(__ \ "a" \ "b", __ \ "a" \ "b").run(in)
         out mustBe Right(in)
       }
     }

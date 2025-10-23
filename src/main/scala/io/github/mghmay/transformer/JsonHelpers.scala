@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package io.github.mghmay.shaper
+package io.github.mghmay.transformer
 
 import play.api.libs.json._
 
