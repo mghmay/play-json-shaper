@@ -41,12 +41,6 @@ object JsonTransform {
     compose(steps.toVector)
 
   /**
-   * A builder for creating transformation pipelines with a fluent API.
-   *
-   * @param steps The sequence of transformers in this pipeline
-   */
-
-  /**
    * Creates a new empty transformation pipeline.
    *
    * @return A new Pipeline instance with no transformation steps
