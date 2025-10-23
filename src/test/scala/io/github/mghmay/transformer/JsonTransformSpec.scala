@@ -4,10 +4,9 @@
  * SPDX-License-Identifier: MIT
  */
 
-package io.github.mghmay.shaper
+package io.github.mghmay.transformer
 
-import io.github.mghmay.transformer.JsonHelpers.SourceCleanup
-import io.github.mghmay.transformer.JsonTransform
+import io.github.mghmay.helpers.JsonHelpers._
 import io.github.mghmay.transformer.syntax._
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers

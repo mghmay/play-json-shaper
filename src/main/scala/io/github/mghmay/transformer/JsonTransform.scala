@@ -6,7 +6,7 @@
 
 package io.github.mghmay.transformer
 
-import JsonHelpers.SourceCleanup
+import io.github.mghmay.helpers.JsonHelpers._
 import play.api.libs.json._
 
 /**

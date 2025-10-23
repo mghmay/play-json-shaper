@@ -1,4 +1,4 @@
-# play-json-transformer
+# play-json-shaper
 
 Tiny, opinionated helpers for building **pure**, **composable** JSON transformations on top of Play JSON.
 
@@ -13,7 +13,7 @@ Tiny, opinionated helpers for building **pure**, **composable** JSON transformat
 
 ```scala
 // build.sbt
-libraryDependencies += "io.github.mghmay" %% "play-json-transformer" % "<version>"
+libraryDependencies += "io.github.mghmay" %% "play-json-shaper" % "<version>"
 ```
 
 ```scala

@@ -6,7 +6,8 @@
 
 package io.github.mghmay.transformer
 
-import io.github.mghmay.transformer.JsonHelpers.SourceCleanup
+import io.github.mghmay.helpers.DefaultJsonHelpers
+import io.github.mghmay.helpers.JsonHelpers._
 import play.api.libs.json.{JsObject, JsPath, JsResult, JsValue}
 
 protected[transformer] object JsonTransformOps {
