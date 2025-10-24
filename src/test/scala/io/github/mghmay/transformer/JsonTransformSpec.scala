@@ -7,6 +7,7 @@
 package io.github.mghmay.transformer
 
 import io.github.mghmay.helpers.SourceCleanup
+import io.github.mghmay.transformer.api.JsonTransform
 import io.github.mghmay.transformer.syntax._
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -75,7 +76,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
       (viaFluent.toOption.get \ "meta" \ "ok").as[Boolean] mustBe true
     }
 
-    "pipeline.build equals Shaper.apply(Seq(...)) composition (same observable output)" in {
+    "pipeline.build equals JsonTransform.apply(Seq(...)) composition (same observable output)" in {
       val in = Json.obj("x" -> 1)
 
       val f1 = JsonTransform

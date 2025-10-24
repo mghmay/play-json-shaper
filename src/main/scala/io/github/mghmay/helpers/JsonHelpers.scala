@@ -186,10 +186,3 @@ trait JsonHelpers {
             Seq(path -> Seq(JsonValidationError("set: unsupported path segment (arrays not supported)")))))
     }
 }
-
-/** ADT for source-side cleanup policy when moving a node. */
-sealed trait SourceCleanup
-object SourceCleanup {
-  case object Aggressive extends SourceCleanup
-  case object Tombstone  extends SourceCleanup
-}
