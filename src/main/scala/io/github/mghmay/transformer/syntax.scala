@@ -178,4 +178,32 @@ object syntax {
     def or(q: Predicate): Predicate  = j => p(j) || q(j)
     def not: Predicate               = j => !p(j)
   }
+
+  object run {
+    /** Apply a Transformer to a JsObject. */
+    @inline def apply(t: Transformer)(json: JsObject): Either[JsError, JsObject] = t(json)
+  }
+
+  /** Pipe a JsObject into a Transformer: json |> t */
+  implicit final class PipeJsonOps(private val json: JsObject) extends AnyVal {
+    @inline def |>(t: Transformer): Either[JsError, JsObject] = t(json)
+  }
+
+  /** Pipe an Either result into the next Transformer: (json |> t1) |> t2 */
+  implicit final class PipeEitherOps(private val res: Either[JsError, JsObject]) extends AnyVal {
+    @inline def |>(t: Transformer): Either[JsError, JsObject] = res.flatMap(t)
+  }
+
+  /** Compose transformers with pipe style: t1 |> t2 produces a Transformer */
+  implicit final class PipeTransformerOps(private val t: Transformer) extends AnyVal {
+    @inline def |>(next: Transformer): Transformer = json => t(json).flatMap(next)
+    @inline def andThen(next: Transformer): Transformer = json => t(json).flatMap(next)
+    @inline def applyTo(json: JsObject): Either[JsError, JsObject] = t(json)
+  }
+
+  /** Compose pipeline with pipe style: t1 |> t2 produces a Transformer */
+  implicit final class PipePipelineOps(private val p: PipelineBuilder) extends AnyVal {
+    @inline def |>(t: Transformer): PipelineBuilder       = p.andThen(t)
+    @inline def |>(other: PipelineBuilder): PipelineBuilder = p.andThen(other)
+  }
 }
