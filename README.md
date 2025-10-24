@@ -132,6 +132,25 @@ ifMissing(__ \ "ctx" \ "version")(mergeAt(__ \ "ctx", Json.obj("version" -> 1)))
 
 They compose cleanly both in the fluent builder and direct style.
 
+### Predicates
+
+A predicate is:
+```scala
+  type Predicate = JsObject => Boolean
+```
+
+Predicates determine the execution of conditionals.
+
+```scala
+val isAdmin: Predicate  = j => (j \ "user" \ "level").asOpt[Int].exists(_ > 2)
+val hasEmail: Predicate = j => (j \ "user" \ "email").asOpt[String].exists(_.nonEmpty)
+
+val adminWithoutEmail = isAdmin and hasEmail.not     // or: isAdmin && !hasEmail or any combination
+val dontContact = move(__ \ "user", __ \ "noContact")
+
+val out = when(adminWithoutEmail)(dontContact)(json)
+```
+
 ---
 
 ## Error handling & short-circuiting

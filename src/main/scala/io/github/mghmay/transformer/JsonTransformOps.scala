@@ -35,7 +35,7 @@ protected[transformer] object JsonTransformOps extends JsonHelpers {
   def mapAt(path: JsPath)(vf: JsValue => JsResult[JsValue]): Transformer =
     (json: JsObject) => mapAt(path, json)(vf)
 
-  def when(pred: JsObject => Boolean)(step: Transformer): Transformer =
+  def when(pred: Predicate)(step: Transformer): Transformer =
     (json: JsObject) => if (pred(json)) step(json) else Right(json)
 
   def ifExists(path: JsPath)(step: Transformer): Transformer =

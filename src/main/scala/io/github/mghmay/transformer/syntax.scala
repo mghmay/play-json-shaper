@@ -141,7 +141,7 @@ object syntax {
     * @example
     *   {{{val conditional = Shaper.when(_.keys.contains("admin"))(adminTransformer)}}}
     */
-  def when(pred: JsObject => Boolean)(step: Transformer): Transformer = JsonTransformOps.when(pred)(step)
+  def when(pred: Predicate)(step: Transformer): Transformer = JsonTransformOps.when(pred)(step)
 
   /** Executes a transformation only if the specified path exists and resolves to a single value.
     *
@@ -168,4 +168,14 @@ object syntax {
     *   {{{val ifNoUser = Shaper.ifMissing(__ \ "user")(defaultUserTransformer)}}}
     */
   def ifMissing(path: JsPath)(step: Transformer): Transformer = JsonTransformOps.ifMissing(path)(step)
+
+  implicit final class PredicateOps(private val p: Predicate) extends AnyVal {
+    def &&(q: Predicate): Predicate = j => p(j) && q(j)
+    def ||(q: Predicate): Predicate = j => p(j) || q(j)
+    def unary_! : Predicate         = j => !p(j)
+
+    def and(q: Predicate): Predicate = j => p(j) && q(j)
+    def or(q: Predicate): Predicate  = j => p(j) || q(j)
+    def not: Predicate               = j => !p(j)
+  }
 }

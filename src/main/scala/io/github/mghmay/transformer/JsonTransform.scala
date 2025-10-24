@@ -119,7 +119,7 @@ object JsonTransform {
     * @see
     *   [[syntax.when]]
     */
-  def when(pred: JsObject => Boolean)(step: Transformer): PipelineBuilder =
+  def when(pred: Predicate)(step: Transformer): PipelineBuilder =
     start.when(pred)(step)
 
   /** Adds an existence check operation to the pipeline.
@@ -228,7 +228,7 @@ final class PipelineBuilder(private val steps: Vector[Transformer]) {
     * @see
     *   [[syntax.when]]
     */
-  def when(pred: JsObject => Boolean)(step: Transformer): PipelineBuilder =
+  def when(pred: Predicate)(step: Transformer): PipelineBuilder =
     andThen(JsonTransformOps.when(pred)(step))
 
   /** Adds an existence check operation to the pipeline.
