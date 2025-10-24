@@ -21,3 +21,7 @@ sbt.json
 Thumbs.db
 *.log
 *.swp
+
+# Ignore all Scala worksheets
+*.sc
+
