@@ -38,10 +38,6 @@ This base type either returns a transformed `JsObject` or a `JsError` explaining
 Use `JsonTransform.start` and chain steps. Build once, run many.
 
 ```scala
-import io.github.mghmay.transformer._
-import io.github.mghmay.transformer.syntax._
-import play.api.libs.json._
-
 val pipeline =
   JsonTransform
     .move(__ \ "old", __ \ "new")  // default Aggressive source cleanup
@@ -70,9 +66,6 @@ val p  = p1 andThen p2
 Compose plain functions when that reads nicer (for-comprehensions, lists, etc.):
 
 ```scala
-import io.github.mghmay.transformer.syntax._
-import play.api.libs.json._
-
 val viaFor = for {
   j1 <- move(__ \ "a" \ "name", __ \ "person" \ "name")
     (Json.obj("a" -> Json.obj("name" -> "Ada")))
@@ -99,8 +92,6 @@ val out = f(Json.obj("x" -> 1))
 The `move`, `set`, `copy` etc. functions are all imported through the syntax object:
 
 ```scala
-import io.github.mghmay.transformer.syntax._
-
 val t: Transformer =
   when(_.keys.contains("admin"))(
     set(__ \ "ctx" \ "isAdmin", JsBoolean(true))
@@ -109,9 +100,6 @@ val t: Transformer =
 - `move(from, to)` uses **Aggressive** cleanup by default. This aggressively prunes the parent tree if it is empty after the move. To override:
 
 ```scala
-import io.github.mghmay.transformer.syntax._
-import io.github.mghmay.transformer.JsonHelpers.SourceCleanup
-
 val tombstoneMove = move(__ \ "src", __ \ "dst", SourceCleanup.Tombstone)
 // This leaves a null JsValue at the moved from source node.
 ```
@@ -212,6 +200,110 @@ val ensureVersion =
   )
 ```
 
+### In-depth example
+
+```scala
+import io.github.mghmay.transformer.Transformer
+import play.api.libs.json._
+import io.github.mghmay.transformer.syntax._
+
+/* 
+Our input json, the aim is to transform it in the following ways:
+ - if the level of the user is higher than 2 they are an admin and "user" key should be 
+   transformed to "admin"
+ - user level should be removed
+ - name value should be transformed from a full name to an object: {"first", "last"}
+ 
+In order to do this we will make out own transformers using the transformers provided in
+ops as building blocks. 
+*/
+
+val inJson = Json.parse(
+  """
+    |{
+    |  "user": {
+    |    "level": 4,
+    |    "name": "Ada Lovelace"
+    |  }
+    |}
+    |""".stripMargin).as[JsObject]
+
+/* 
+The nice part about transformers is that the Either[JsError, JsObject] can be taken out
+into its own reusable function, in this example, splitName could be deployed wherever
+we are given a fullName
+*/
+
+def splitName(full: String): Either[JsError, JsObject] =
+  full.split(" ") match {
+    case Array(first, last) => Right(Json.obj("first" -> first, "last" -> last))
+    case _                  => Left(JsError("Expected exactly two name parts"))
+  }
+
+/* 
+Now we can build a specialised transformer which gets the user name at a specific key in
+the json.
+*/
+def userNameTransformer: Transformer = {
+  json =>
+    (json \ "user" \ "name").validate[String] match {
+      case JsSuccess(name, _) =>
+        /*
+         We can use the building blocks of the split name function and the set method to
+         build a result
+         */
+        for {
+          sName  <- splitName(name)
+          result <- set(__ \ "user" \ "name", sName)(json)
+        } yield result
+      case JsError(e)         => Left(JsError(e))
+    }
+}
+
+/*
+We also want an easy way to transform a user into an admin if their level is higher than 2.
+Here is the transformer we can supply into a when transformer
+ */
+def adminTransformer: Transformer = {
+  json =>
+    for {
+      // First remove the level
+      j1 <- pruneGentle(__ \ "user" \ "level")(json)
+      // Then move all the rest to admin key 
+      j2 <- move(__ \ "user", __ \ "admin")(j1)
+    } yield j2
+}
+
+/*
+In order to find out if a user is an admin or not we need a way to check the level, we build
+a Predicate which takes json and checks the user's level.
+ */
+def isAdmin: Predicate = j => (j \ "user" \ "level").asOpt[Int].exists(_ > 2)
+
+/*
+Our final transformation is nice and simple, firstly we transform the user's name. We need to
+ensure that it is changed before we transform the user key into admin key. Then we can safely
+check if the user is an admin and if they are, transform the "user" key to "admin"
+ */
+val transformed = for {
+  j1 <- userNameTransformer(inJson)
+  j2 <- when(isAdmin)(adminTransformer)(j1)
+} yield j2
+
+"""
+    | transformed:
+    | {
+    |   "admin": {
+    |     "name": {
+    |       "first": "Ada",
+    |       "last": "Lovelace"
+    |     }
+    |   }
+    | }
+    |"""
+
+```
+
 ---
 
 ## Testing
@@ -222,14 +314,7 @@ val ensureVersion =
 
 ---
 
-## License
-
-MIT © 2025 Mathew May
-
-
----
-
-### To-dos
+## To-dos
 
 - Filter out non-object intermediary values (enforce stricter parent types)
 - Add support for array paths (`IdxPathNode`)
@@ -237,3 +322,12 @@ MIT © 2025 Mathew May
 - Add a way to deal with enums and perhaps map them
 - For very large pipelines, the current foldLeft approach creates intermediate functions. For extreme performance, it could be compiled to a single function
 - Transformer could return non-blocking errors that get collected in a sequence similar to cats `Validated`
+- Add further conditionals, `unless`, `whenAll`, `whenAny`, `choose` etc.
+
+---
+
+## License
+
+MIT © 2025 Mathew May
+
+
