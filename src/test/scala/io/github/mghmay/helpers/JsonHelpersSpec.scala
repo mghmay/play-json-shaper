@@ -6,13 +6,11 @@
 
 package io.github.mghmay.helpers
 
-import io.github.mghmay.helpers.DefaultJsonHelpers._
-import io.github.mghmay.helpers.JsonHelpers.SourceCleanup
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import play.api.libs.json._
 
-class JsonHelpersSpec extends AnyFreeSpec with Matchers {
+class JsonHelpersSpec extends AnyFreeSpec with JsonHelpers with Matchers {
 
   "JsonHelpers" - {
 
@@ -32,13 +30,15 @@ class JsonHelpersSpec extends AnyFreeSpec with Matchers {
 
       "gentle mode leaves a tombstone at the exact 'from' path (scalar)" in {
         val in  = Json.parse("""{ "a": { "b": 1 }, "x": null }""")
-        val out = movePath(__ \ "a" \ "b", __ \ "x", in.as[JsObject], cleanup = SourceCleanup.Tombstone).toOption.get
+        val out =
+          movePath(__ \ "a" \ "b", __ \ "x", in.as[JsObject], cleanup = SourceCleanup.Tombstone).toOption.get
         out mustBe Json.parse("""{ "a": { "b": null }, "x": 1 }""")
       }
 
       "gentle mode leaves a tombstone at the exact 'from' path (deep leaf)" in {
         val in  = Json.parse("""{ "a": { "b": { "c": 1 } }, "x": null }""")
-        val out = movePath(__ \ "a" \ "b" \ "c", __ \ "x", in.as[JsObject], cleanup = SourceCleanup.Tombstone).toOption.get
+        val out = movePath(__ \ "a" \ "b" \ "c", __ \ "x", in.as[JsObject],
+          cleanup = SourceCleanup.Tombstone).toOption.get
         out mustBe Json.parse("""{ "a": { "b": { "c": null } }, "x": 1 }""")
       }
 
@@ -79,7 +79,7 @@ class JsonHelpersSpec extends AnyFreeSpec with Matchers {
       }
 
       "overlap + Tombstone: from is ancestor of to; write succeeds and value ends at descendant" in {
-        val in = Json.parse(
+        val in  = Json.parse(
           """
             |{
             |  "a": { "k": 1 }
@@ -109,25 +109,25 @@ class JsonHelpersSpec extends AnyFreeSpec with Matchers {
       }
 
       "fails with JsError when source path does not exist" in {
-        val in   = Json.parse("""{ "a": 1 }""")
-        val left = movePath(__ \ "missing", __ \ "x", in.as[JsObject]).left.get
+        val in              = Json.parse("""{ "a": 1 }""")
+        val left            = movePath(__ \ "missing", __ \ "x", in.as[JsObject]).left.get
         val (badPath, msgs) = left.errors.head
         badPath mustBe (__ \ "missing")
-        msgs.head.message must include ("movePath")
+        msgs.head.message must include("movePath")
       }
 
       "fails with JsError when source path resolves to multiple values (ambiguous)" in {
-        val in   = Json.parse("""{ "arr": [ { "b": 1 }, { "b": 2 } ], "x": null }""")
-        val left = movePath(__ \ "arr" \ "b", __ \ "x", in.as[JsObject]).left.get
+        val in              = Json.parse("""{ "arr": [ { "b": 1 }, { "b": 2 } ], "x": null }""")
+        val left            = movePath(__ \ "arr" \ "b", __ \ "x", in.as[JsObject]).left.get
         val (badPath, msgs) = left.errors.head
         badPath mustBe (__ \ "arr" \ "b")
-        msgs.head.message must include ("not unique")
+        msgs.head.message must include("not unique")
       }
 
       "fails when destination path uses array index (unsupported in setPath)" in {
         val in   = Json.parse("""{ "a": { "b": 1 }, "x": [] }""")
         val left = movePath(__ \ "a" \ "b", __ \ "x" \ 0, in.as[JsObject]).left.get
-        left.errors.head._2.head.message.toLowerCase must include ("unsupported path")
+        left.errors.head._2.head.message.toLowerCase must include("unsupported path")
       }
     }
 
@@ -195,7 +195,7 @@ class JsonHelpersSpec extends AnyFreeSpec with Matchers {
       "fails when path does not exist" in {
         val in   = Json.parse("""{ "a": { "b": "value" } }""")
         val left = aggressivePrunePath(__ \ "a" \ "missing", in.as[JsObject]).left.get
-        left.errors.head._2.head.message must include ("path not found")
+        left.errors.head._2.head.message must include("path not found")
       }
     }
 
@@ -210,7 +210,7 @@ class JsonHelpersSpec extends AnyFreeSpec with Matchers {
       "fails when path does not exist or unsupported" in {
         val in   = Json.parse("""{ "a": { } }""")
         val left = gentlePrunePath(__ \ "a" \ "missing", in.as[JsObject]).left.get
-        left.errors.head._2.head.message.toLowerCase must include ("path not found")
+        left.errors.head._2.head.message.toLowerCase must include("path not found")
       }
     }
 
@@ -218,7 +218,8 @@ class JsonHelpersSpec extends AnyFreeSpec with Matchers {
 
       "deep merges into an existing object and creates parents as needed" in {
         val in  = Json.parse("""{ "ctx": { "env": "dev" } }""")
-        val out = deepMergeAt(in.as[JsObject], __ \ "ctx", Json.obj("version" -> 3, "env" -> "prod")).toOption.get
+        val out =
+          deepMergeAt(in.as[JsObject], __ \ "ctx", Json.obj("version" -> 3, "env" -> "prod")).toOption.get
         (out \ "ctx" \ "env").as[String] mustBe "prod"
         (out \ "ctx" \ "version").as[Int] mustBe 3
       }
@@ -230,8 +231,8 @@ class JsonHelpersSpec extends AnyFreeSpec with Matchers {
       }
 
       "fails with JsError when the path contains array segments (IdxPathNode)" in {
-        val in   = Json.parse("""{ "a": [ { "b": 1 } ] }""")
-        val left = deepMergeAt(in.as[JsObject], __ \ "a" \ 0 \ "b", Json.obj("x" -> 2)).left.get
+        val in                  = Json.parse("""{ "a": [ { "b": 1 } ] }""")
+        val left                = deepMergeAt(in.as[JsObject], __ \ "a" \ 0 \ "b", Json.obj("x" -> 2)).left.get
         val (badPath, messages) = left.errors.head
         badPath mustBe (__ \ "a" \ 0 \ "b")
         messages.head.message must include("IdxPathNode")

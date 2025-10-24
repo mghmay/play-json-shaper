@@ -8,14 +8,10 @@ package io.github.mghmay.helpers
 
 import play.api.libs.json._
 
-object DefaultJsonHelpers extends JsonHelpers
-
 /** Low-level helpers for shaping Play JSON JsObjects. These power the public Shaper API and can be reused if
   * needed.
   */
 trait JsonHelpers {
-
-  import JsonHelpers._
 
   /** Move the JSON node at 'from' to 'to', creating destination parents as needed.
     *
@@ -57,9 +53,9 @@ trait JsonHelpers {
   }
 
   /** Copy the JSON node at 'from' to 'to', creating destination parents as needed.
-   *
-   * If 'to' is a descendant of 'from', the write proceeds and source parents remain untouched.
-   */
+    *
+    * If 'to' is a descendant of 'from', the write proceeds and source parents remain untouched.
+    */
   final def copyPath(from: JsPath, to: JsPath, json: JsObject): Either[JsError, JsObject] =
     if (from == to) Right(json)
     else
@@ -67,20 +63,23 @@ trait JsonHelpers {
         case JsDefined(value) => setNestedPath(to, value, json)
         case _: JsUndefined   =>
           Left(JsError(Seq(from -> Seq(JsonValidationError(
-            s"copyPath: source '$from' not found or not unique; target='$to'"
-          )))))
+                  s"copyPath: source '$from' not found or not unique; target='$to'"
+                )))))
       }
 
   /** Transform the value at 'path' using a validator/mapping function 'vf'.
-   *
-   * @param path Path of the node to transform. Must resolve to a single value.
-   * @param json Input object.
-   * @param vf   Function that takes the current JsValue and returns the replacement JsValue or a JsError.
-   */
+    *
+    * @param path
+    *   Path of the node to transform. Must resolve to a single value.
+    * @param json
+    *   Input object.
+    * @param vf
+    *   Function that takes the current JsValue and returns the replacement JsValue or a JsError.
+    */
   final def mapAt(
-                   path: JsPath,
-                   json: JsObject
-                 )(vf: JsValue => JsResult[JsValue]): Either[JsError, JsObject] =
+      path: JsPath,
+      json: JsObject
+  )(vf: JsValue => JsResult[JsValue]): Either[JsError, JsObject] =
     path.asSingleJson(json) match {
       case _: JsUndefined =>
         Left(JsError(Seq(path -> Seq(JsonValidationError("mapAt: path not found or not unique")))))
@@ -189,10 +188,8 @@ trait JsonHelpers {
 }
 
 /** ADT for source-side cleanup policy when moving a node. */
-object JsonHelpers {
-  sealed trait SourceCleanup
-  object SourceCleanup {
-    case object Aggressive extends SourceCleanup
-    case object Tombstone  extends SourceCleanup
-  }
+sealed trait SourceCleanup
+object SourceCleanup {
+  case object Aggressive extends SourceCleanup
+  case object Tombstone  extends SourceCleanup
 }

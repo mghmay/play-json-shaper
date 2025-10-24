@@ -6,7 +6,7 @@
 
 package io.github.mghmay.transformer
 
-import io.github.mghmay.helpers.JsonHelpers._
+import io.github.mghmay.helpers.SourceCleanup
 import io.github.mghmay.transformer.syntax._
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers

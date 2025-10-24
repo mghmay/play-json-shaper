@@ -6,7 +6,7 @@
 
 package io.github.mghmay.transformer
 
-import io.github.mghmay.helpers.JsonHelpers._
+import io.github.mghmay.helpers.SourceCleanup
 import play.api.libs.json._
 
 object syntax {
@@ -24,7 +24,7 @@ object syntax {
     * @note
     *   Fails if the source path does not exist or resolves to multiple values
     * @example
-    *   {{{ val mover = Shaper.move(__ \ "user" \ "name", __ \ "person" \ "fullName") }}}
+    *   {{{val mover = Shaper.move(__ \ "user" \ "name", __ \ "person" \ "fullName")}}}
     */
   object move {
     def apply(from: JsPath, to: JsPath): Transformer =
@@ -45,7 +45,7 @@ object syntax {
     * @note
     *   Fails if the source path does not exist or resolves to multiple values
     * @example
-    *   {{{ val copier = Shaper.copy(__ \ "original", __ \ "backup") }}}
+    *   {{{val copier = Shaper.copy(__ \ "original", __ \ "backup")}}}
     */
   def copy: (JsPath, JsPath) => Transformer = JsonTransformOps.copy
 
@@ -58,7 +58,7 @@ object syntax {
     * @return
     *   A Transformer that sets the value at the given path
     * @example
-    *   {{{ val setter = Shaper.set(__ \ "metadata" \ "version", JsString("1.0")) }}}
+    *   {{{val setter = Shaper.set(__ \ "metadata" \ "version", JsString("1.0"))}}}
     */
   def set: (JsPath, JsValue) => Transformer = JsonTransformOps.set
 
@@ -73,7 +73,7 @@ object syntax {
     * @note
     *   Currently does not support array path segments
     * @example
-    *   {{{ val merger = Shaper.mergeAt(__ \ "config", Json.obj("debug" -> JsTrue)) }}}
+    *   {{{val merger = Shaper.mergeAt(__ \ "config", Json.obj("debug" -> JsTrue))}}}
     */
   def mergeAt: (JsPath, JsObject) => Transformer = JsonTransformOps.mergeAt
 
@@ -86,7 +86,7 @@ object syntax {
     * @note
     *   Fails if the path contains array segments or doesn't exist
     * @example
-    *   {{{ val pruner = Shaper.pruneAggressive(__ \ "temp" \ "cache") }}}
+    *   {{{val pruner = Shaper.pruneAggressive(__ \ "temp" \ "cache")}}}
     */
   def pruneAggressive: JsPath => Transformer = JsonTransformOps.pruneAggressive
 
@@ -99,7 +99,7 @@ object syntax {
     * @note
     *   Fails if the path contains array segments or doesn't exist
     * @example
-    *   {{{ val pruner = Shaper.pruneGentle(__ \ "metadata" \ "timestamp") }}}
+    *   {{{val pruner = Shaper.pruneGentle(__ \ "metadata" \ "timestamp")}}}
     */
   def pruneGentle: JsPath => Transformer = JsonTransformOps.pruneGentle
 
@@ -112,7 +112,7 @@ object syntax {
     * @return
     *   A Transformer that performs the rename operation
     * @example
-    *   {{{ val renamer = Shaper.rename(__ \ "oldName", __ \ "newName") }}}
+    *   {{{val renamer = Shaper.rename(__ \ "oldName", __ \ "newName")}}}
     */
   def rename: (JsPath, JsPath) => Transformer = JsonTransformOps.rename
 
@@ -139,7 +139,7 @@ object syntax {
     * @return
     *   A Transformer that executes the step only when the predicate returns true
     * @example
-    *   {{{ val conditional = Shaper.when(_.keys.contains("admin"))(adminTransformer) }}}
+    *   {{{val conditional = Shaper.when(_.keys.contains("admin"))(adminTransformer)}}}
     */
   def when(pred: JsObject => Boolean)(step: Transformer): Transformer = JsonTransformOps.when(pred)(step)
 
@@ -152,7 +152,7 @@ object syntax {
     * @return
     *   A Transformer that executes the step only when the path exists
     * @example
-    *   {{{ val ifUserExists = Shaper.ifExists(__ \ "user")(userTransformer) }}}
+    *   {{{val ifUserExists = Shaper.ifExists(__ \ "user")(userTransformer)}}}
     */
   def ifExists(path: JsPath)(step: Transformer): Transformer = JsonTransformOps.ifExists(path)(step)
 
@@ -165,7 +165,7 @@ object syntax {
     * @return
     *   A Transformer that executes the step only when the path is missing
     * @example
-    *   {{{ val ifNoUser = Shaper.ifMissing(__ \ "user")(defaultUserTransformer) }}}
+    *   {{{val ifNoUser = Shaper.ifMissing(__ \ "user")(defaultUserTransformer)}}}
     */
   def ifMissing(path: JsPath)(step: Transformer): Transformer = JsonTransformOps.ifMissing(path)(step)
 }
