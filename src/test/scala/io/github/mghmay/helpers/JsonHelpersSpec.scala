@@ -339,7 +339,7 @@ class JsonHelpersSpec extends AnyFreeSpec with JsonHelpers with Matchers {
 
         val (badPath, msgs) = left.errors.head
         badPath mustBe JsPath(Nil)
-        msgs.head.message must include("prune: empty path")
+        msgs.head.message must include("empty path")
       }
     }
 

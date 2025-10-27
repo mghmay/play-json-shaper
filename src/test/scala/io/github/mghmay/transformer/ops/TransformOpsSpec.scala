@@ -101,7 +101,7 @@ final class TransformOpsSpec extends AnyFreeSpec with Matchers {
       val inBad = Json.parse("""{ "a": { "b": 1 }, "arr": [] }""").as[JsObject]
       val left  = TransformOps.pruneAggressive(__ \ "arr" \ 0)(inBad).swap.getOrElse(
         fail("Expected successful transformation"))
-      left.errors.head._2.head.message must include("prune: expected object at 'arr'")
+      left.errors.head._2.head.message must include("expected object at 'arr'")
     }
 
     "pruneAggressive: fails when path starts with an array segment (unsupported)" in {
