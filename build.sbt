@@ -1,7 +1,7 @@
 ThisBuild / organization       := "io.github.mghmay"
 ThisBuild / organizationName   := "Mathew May"
 ThisBuild / startYear          := Some(2025)
-ThisBuild / scalaVersion       := "2.13.14"
+ThisBuild / scalaVersion       := "2.13.16"
 ThisBuild / crossScalaVersions := Seq("2.13.14", "3.3.4")
 ThisBuild / version            := "0.1.0-SNAPSHOT"
 ThisBuild / licenses           := Seq("MIT" -> url("https://opensource.org/licenses/MIT"))
