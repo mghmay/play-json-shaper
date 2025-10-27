@@ -27,7 +27,8 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
 
       val res = JsonTransform(failing, wouldSet)(in)
       res.isLeft mustBe true
-      res.left.get.errors.head._1 mustBe (__ \ "oops")
+      val out = res.left.getOrElse(fail("Expected successful transformation"))
+        out.errors.head._1 mustBe (__ \ "oops")
     }
 
     "apply(varargs) equals compose(Seq(...)) for observable output" in {
@@ -44,44 +45,44 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
 
     "copy: keeps source intact and writes destination" in {
       val in  = Json.parse("""{ "a": { "b": 1 } }""").as[JsObject]
-      val out = JsonTransform.copy(__ \ "a" \ "b", __ \ "x").run(in).toOption.get
+      val out = JsonTransform.copy(__ \ "a" \ "b", __ \ "x").run(in).toOption.getOrElse(fail("Expected successful transformation"))
       out mustBe Json.parse("""{ "a": { "b": 1 }, "x": 1 }""")
     }
 
     "copy: overwrites destination and leaves source unchanged" in {
       val in  = Json.parse("""{ "a": { "b": 1 }, "x": 999 }""").as[JsObject]
-      val out = JsonTransform.copy(__ \ "a" \ "b", __ \ "x").run(in).toOption.get
+      val out = JsonTransform.copy(__ \ "a" \ "b", __ \ "x").run(in).toOption.getOrElse(fail("Expected successful transformation"))
       out mustBe Json.parse("""{ "a": { "b": 1 }, "x": 1 }""")
     }
 
     "copy: destination descendant of source" in {
       val in  = Json.parse("""{ "a": { "b": 1 } }""").as[JsObject]
-      val out = JsonTransform.copy(__ \ "a", __ \ "a" \ "copy").run(in).toOption.get
+      val out = JsonTransform.copy(__ \ "a", __ \ "a" \ "copy").run(in).toOption.getOrElse(fail("Expected successful transformation"))
       out mustBe Json.parse("""{ "a": { "b": 1, "copy": { "b": 1 } } }""")
     }
 
     "rename: moves a field at the top level" in {
       val in  = Json.obj("oldKey" -> "v")
-      val out = JsonTransform.rename(__ \ "oldKey", __ \ "newKey").run(in).toOption.get
+      val out = JsonTransform.rename(__ \ "oldKey", __ \ "newKey").run(in).toOption.getOrElse(fail("Expected successful transformation"))
       out mustBe Json.obj("newKey" -> "v")
     }
 
     "pruneAggressive: removes key and empties parents" in {
       val in  = Json.parse("""{ "a": { "b": { "c": 1 } } }""").as[JsObject]
-      val out = JsonTransform.pruneAggressive(__ \ "a" \ "b" \ "c").run(in).toOption.get
+      val out = JsonTransform.pruneAggressive(__ \ "a" \ "b" \ "c").run(in).toOption.getOrElse(fail("Expected successful transformation"))
       out mustBe Json.obj()
     }
 
     "pruneGentle: removes key but keeps parents" in {
       val in  = Json.parse("""{ "a": { "b": { "c": 1 } } }""").as[JsObject]
-      val out = JsonTransform.pruneGentle(__ \ "a" \ "b" \ "c").run(in).toOption.get
+      val out = JsonTransform.pruneGentle(__ \ "a" \ "b" \ "c").run(in).toOption.getOrElse(fail("Expected successful transformation"))
       out mustBe Json.parse("""{ "a": { "b": { } } }""")
     }
 
     "mapAt: modifies a scalar via validator" in {
       val in  = Json.parse("""{ "x": 10 }""").as[JsObject]
       val out = JsonTransform.mapAt(__ \ "x")(v => v.validate[Int].map(i => JsNumber(i + 5)))
-        .run(in).toOption.get
+        .run(in).toOption.getOrElse(fail("Expected successful transformation"))
       (out \ "x").as[Int] mustBe 15
     }
 
@@ -92,7 +93,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
         .mergeAt(__, Json.obj("x" -> 10))
         .set(__ \ "k", JsNumber(99))
         .apply(in)
-        .toOption.get
+        .toOption.getOrElse(fail("Expected successful transformation"))
 
       out mustBe Json.parse("""{ "k": 99, "x": 10 }""")
     }
@@ -102,7 +103,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
       val out = JsonTransform
         .when(j => (j \ "n").asOpt[Int].exists(_ > 1))(set(__ \ "flag", JsBoolean(true)))
         .run(in)
-        .toOption.get
+        .toOption.getOrElse(fail("Expected successful transformation"))
 
       out mustBe Json.obj("n" -> 2, "flag" -> true)
     }
@@ -120,7 +121,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
       val out = JsonTransform
         .ifExists(__ \ "old")(move(__ \ "old", __ \ "new"))
         .run(in)
-        .toOption.get
+        .toOption.getOrElse(fail("Expected successful transformation"))
 
       out mustBe Json.parse("""{ "new": "x", "other": 1 }""")
     }
@@ -130,7 +131,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
       val out = JsonTransform
         .ifExists(__ \ "arr" \ "b")(set(__ \ "touched", JsBoolean(true)))
         .run(in)
-        .toOption.get
+        .toOption.getOrElse(fail("Expected successful transformation"))
 
       out mustBe in
     }
@@ -140,7 +141,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
       val out = JsonTransform
         .ifExists(__ \ "old")(set(__ \ "touched", JsBoolean(true)))
         .run(in)
-        .toOption.get
+        .toOption.getOrElse(fail("Expected successful transformation"))
 
       out mustBe in
     }
@@ -150,7 +151,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
       val out = JsonTransform
         .ifMissing(__ \ "ctx" \ "version")(mergeAt(__ \ "ctx", Json.obj("version" -> 1)))
         .run(in)
-        .toOption.get
+        .toOption.getOrElse(fail("Expected successful transformation"))
 
       out mustBe Json.parse("""{ "ctx": { "env": "dev", "version": 1 } }""")
     }
@@ -160,7 +161,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
       val out = JsonTransform
         .ifMissing(__ \ "ctx" \ "version")(set(__ \ "shouldNot", JsBoolean(true)))
         .run(in)
-        .toOption.get
+        .toOption.getOrElse(fail("Expected successful transformation"))
 
       out mustBe in
     }
@@ -170,7 +171,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
       val out = JsonTransform
         .ifMissing(__ \ "arr" \ "b")(set(__ \ "added", JsString("ran")))
         .run(in)
-        .toOption.get
+        .toOption.getOrElse(fail("Expected successful transformation"))
 
       (out \ "added").as[String] mustBe "ran"
     }

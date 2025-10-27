@@ -35,7 +35,7 @@ final class PipelineBuilderSpec extends AnyFreeSpec with Matchers {
         .pruneAggressive(__ \ "delete" \ "delete")
         .copy(__ \ "ctx", __ \ "copied")
         .run(in)
-        .toOption.get
+        .toOption.getOrElse(fail("Expected successful transformation"))
 
       out mustBe Json.parse(
         """{
@@ -67,14 +67,14 @@ final class PipelineBuilderSpec extends AnyFreeSpec with Matchers {
       val p1 = JsonTransform.start.set(__ \ "a", JsNumber(1))
       val p2 = JsonTransform.start.set(__ \ "b", JsNumber(2))
 
-      val out = p1.andThen(p2).run(Json.obj()).toOption.get
+      val out = p1.andThen(p2).run(Json.obj()).toOption.getOrElse(fail("Expected successful transformation"))
       out mustBe Json.parse("""{ "a": 1, "b": 2 }""")
     }
 
     "andThen(transformer) appends a single step" in {
       val p   = JsonTransform.start.set(__ \ "a", JsNumber(1))
       val p2  = p andThen set(__ \ "b", JsNumber(2))
-      val out = p2.run(Json.obj()).toOption.get
+      val out = p2.run(Json.obj()).toOption.getOrElse(fail("Expected successful transformation"))
       out mustBe Json.parse("""{ "a": 1, "b": 2 }""")
     }
 
@@ -84,12 +84,12 @@ final class PipelineBuilderSpec extends AnyFreeSpec with Matchers {
       val viaMove   = JsonTransform.start.move(__ \ "first", __ \ "second", SourceCleanup.Aggressive).run(in)
 
       viaRename mustBe viaMove
-      viaRename.toOption.get mustBe Json.parse("""{ "second": "val" }""")
+      viaRename.toOption.getOrElse(fail("Expected successful transformation")) mustBe Json.parse("""{ "second": "val" }""")
     }
 
     "copy via builder keeps source intact and writes destination" in {
       val in  = Json.parse("""{ "a": { "b": 1 } }""").as[JsObject]
-      val out = JsonTransform.start.copy(__ \ "a" \ "b", __ \ "x").run(in).toOption.get
+      val out = JsonTransform.start.copy(__ \ "a" \ "b", __ \ "x").run(in).toOption.getOrElse(fail("Expected successful transformation"))
       out mustBe Json.parse("""{ "a": { "b": 1 }, "x": 1 }""")
     }
 
@@ -97,7 +97,8 @@ final class PipelineBuilderSpec extends AnyFreeSpec with Matchers {
       val in  = Json.parse("""{ "a": { "b": 1 }, "arr": [] }""").as[JsObject]
       val res = JsonTransform.start.move(__ \ "a" \ "b", __ \ "arr" \ 0).run(in)
       res.isLeft mustBe true
-      res.left.get.errors.head._2.head.message.toLowerCase must include("unsupported path")
+      val out = res.left.getOrElse(fail("Expected successful transformation"))
+        out.errors.head._2.head.message.toLowerCase must include("unsupported path")
     }
 
     "conditionals: when / ifExists / ifMissing" in {
@@ -107,7 +108,7 @@ final class PipelineBuilderSpec extends AnyFreeSpec with Matchers {
         .when(j => (j \ "n").asOpt[Int].exists(_ > 1))(set(__ \ "flag", JsBoolean(true)))
         .ifExists(__ \ "old")(move(__ \ "old", __ \ "new"))
         .ifMissing(__ \ "ctx" \ "version")(mergeAt(__ \ "ctx", Json.obj("version" -> 1)))
-        .run(in).toOption.get
+        .run(in).toOption.getOrElse(fail("Expected successful transformation"))
 
       out mustBe Json.parse(
         """{ "n": 2, "new": "x", "flag": true, "ctx": { "env": "dev", "version": 1 } }"""
