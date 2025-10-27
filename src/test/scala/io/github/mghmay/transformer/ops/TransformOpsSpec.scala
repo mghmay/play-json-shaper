@@ -61,11 +61,11 @@ final class TransformOpsSpec extends AnyFreeSpec with Matchers {
       out2 mustBe Json.parse("""{ "a": { "b": 1, "copy": { "b": 1 } } }""")
     }
 
-    "set: sets a value; setting empty object at leaf removes the key (leaf removal semantics)" in {
+    "set: sets a value; setting empty object at leaf keeps the key" in {
       val in  = Json.parse("""{ "a": { "b": 1 }, "z": 0 }""").as[JsObject]
       val out = TransformOps.set(__ \ "a", Json.obj())(in).toOption.get
 
-      out mustBe Json.parse("""{ "z": 0 }""")
+      out mustBe Json.parse("""{ "a": { }, "z": 0 }""")
     }
 
     "mergeAt: deep merges and creates parents; fails on array path segments" in {
@@ -89,15 +89,14 @@ final class TransformOpsSpec extends AnyFreeSpec with Matchers {
     "pruneAggressive: fails when parent is not an object" in {
       val inBad = Json.parse("""{ "a": { "b": 1 }, "arr": [] }""").as[JsObject]
       val left  = TransformOps.pruneAggressive(__ \ "arr" \ 0)(inBad).left.get
-      left.errors.head._2.head.message must include ("prune: expected object at 'arr'")
+      left.errors.head._2.head.message must include("prune: expected object at 'arr'")
     }
 
     "pruneAggressive: fails when path starts with an array segment (unsupported)" in {
       val inBadRoot = Json.parse("""{ "a": { "b": 1 }, "arr": [] }""").as[JsObject]
       val left2     = TransformOps.pruneAggressive(__ \ 0)(inBadRoot).left.get
-      left2.errors.head._2.head.message.toLowerCase must include ("arrays not supported")
+      left2.errors.head._2.head.message.toLowerCase must include("arrays not supported")
     }
-
 
     "pruneGentle: removes only target; keeps parents; errors bubble out" in {
       val inGood = Json.parse("""{ "a": { "b": { "c": 1 } } }""").as[JsObject]

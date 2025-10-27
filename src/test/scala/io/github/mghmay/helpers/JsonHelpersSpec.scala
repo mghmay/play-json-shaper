@@ -383,18 +383,17 @@ class JsonHelpersSpec extends AnyFreeSpec with JsonHelpers with Matchers {
         out mustBe Right(in.as[JsObject])
       }
 
-      "removes the key when setting an empty object at a leaf" in {
+      "sets an empty object at a leaf (does not remove the key)" in {
         val in  = Json.parse("""{ "a": { "b": 1 }, "x": 9 }""").as[JsObject]
         val out = setNestedPath(__ \ "a", Json.obj(), in).toOption.get
-        out mustBe Json.parse("""{ "x": 9 }""")
+        out mustBe Json.parse("""{ "a": { }, "x": 9 }""")
       }
 
-      "removes only the leaf when setting an empty object at a deep path" in {
+      "sets an empty object at a deep path (keeps the leaf key)" in {
         val in  = Json.parse("""{ "a": { "b": { "c": "x" } } }""").as[JsObject]
         val out = setNestedPath(__ \ "a" \ "b" \ "c", Json.obj(), in).toOption.get
-        out mustBe Json.parse("""{ "a": { "b": { } } }""")
+        out mustBe Json.parse("""{ "a": { "b": { "c": { } } } }""")
       }
-
     }
   }
 }

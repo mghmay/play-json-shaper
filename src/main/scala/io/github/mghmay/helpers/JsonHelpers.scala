@@ -186,13 +186,7 @@ trait JsonHelpers {
   final def setNestedPath(path: JsPath, value: JsValue, json: JsObject): Either[JsError, JsObject] =
     path.path match {
       case Nil                    => Right(json)
-      case KeyPathNode(k) :: Nil  =>
-        value match {
-          case o: JsObject if o.value.isEmpty =>
-            Right(json - k)
-          case _                              =>
-            Right(json + (k -> value))
-        }
+      case KeyPathNode(k) :: Nil  => Right(json + (k -> value))
       case KeyPathNode(h) :: tail =>
         val child = getChildObj(json, h)
         setNestedPath(JsPath(tail), value, child).map { nested =>
