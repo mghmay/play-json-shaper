@@ -58,8 +58,9 @@ You can also compose pipelines:
 ```scala
 val p1 = JsonTransform.set(__ \ "a", JsNumber(1))
 val p2 = JsonTransform.set(__ \ "b", JsNumber(2))
-val p  = p1 andThen p2
+val p  = p1 |> p2           // or: p1 ++ p2
 ```
+_(There is also an .andThen extension, but because it can be confused with `Function1#andThen`, prefer |> in docs and code.)_
 
 ### 2) Direct composition (no builder)
 
@@ -82,7 +83,13 @@ val f: Transformer = JsonTransform(
   set(__ \ "x", JsNumber(2)),
   mergeAt(__ \ "ctx", Json.obj("v" -> 3))
 )
-val out = f(Json.obj("x" -> 1))
+```
+
+You can also compose transformers directly with `|>`
+
+```scala
+val t: Transformer =
+  set(__ \ "x", JsNumber(2)) |> mergeAt(__ \ "ctx", Json.obj("v" -> 3))
 ```
 
 ---
@@ -103,6 +110,13 @@ val t: Transformer =
 val tombstoneMove = move(__ \ "src", __ \ "dst", SourceCleanup.Tombstone)
 // This leaves a null JsValue at the moved from source node.
 ```
+
+### Pipe operators you’ll use all the time:
+
+- `json |> transformer` - apply a transformer to a JsObject
+- `(either |> transformer)` - chain the next transformer if the previous step succeeded
+- `transformer |> transformer` - compose transformers
+- `builder |> transformer` / `builder |> builder` / `builder ++ builder` - compose fluent pipelines
 
 ---
 

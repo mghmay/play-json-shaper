@@ -17,7 +17,8 @@ trait JsonHelpers {
     *
     * Semantics
     *   - Strict: fails if 'from' does not resolve to a single value.
-    *   - Destination: writes the captured value at 'to' (overwrites if present). No pruning at destination.
+    *   - Destination: writes the captured value at 'to' (object values are deep-merged at the destination).
+    *     No pruning at destination.
     *   - Source cleanup:
     *     - [[SourceCleanup.Aggressive]]: remove the moved key and recursively prune empty parents.
     *     - [[SourceCleanup.Tombstone]] : set a 'null' tombstone at the exact 'from' path (parents unchanged).
@@ -44,7 +45,7 @@ trait JsonHelpers {
             value match {
               case o: JsObject =>
                 deepMergeAt(withoutOld, to, o)
-              case _ =>
+              case _           =>
                 setNestedPath(to, value, withoutOld)
             }
           }
@@ -185,11 +186,11 @@ trait JsonHelpers {
   final def setNestedPath(path: JsPath, value: JsValue, json: JsObject): Either[JsError, JsObject] =
     path.path match {
       case Nil                    => Right(json)
-      case KeyPathNode(k) :: Nil =>
+      case KeyPathNode(k) :: Nil  =>
         value match {
           case o: JsObject if o.value.isEmpty =>
             Right(json - k)
-          case _ =>
+          case _                              =>
             Right(json + (k -> value))
         }
       case KeyPathNode(h) :: tail =>

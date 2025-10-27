@@ -54,10 +54,11 @@ class JsonHelpersSpec extends AnyFreeSpec with JsonHelpers with Matchers {
         out mustBe Json.parse("""{ "dest": { "inner": 1 } }""")
       }
 
-      "overwrites an existing destination value" in {
-        val in  = Json.parse("""{ "a": { "b": 1 }, "x": 999 }""")
-        val out = movePath(__ \ "a" \ "b", __ \ "x", in.as[JsObject]).toOption.get
-        out mustBe Json.parse("""{ "x": 1 }""")
+      "maintains keys at destination after write" in {
+        val in  = Json.parse("""{ "a": { "b": { "c": 1 } }, "x": { "keep": true } }""").as[JsObject]
+        val out = movePath(__ \ "a" \ "b", __ \ "x", in).toOption.get
+        out mustBe Json.parse("""{ "x": { "keep": true, "c": 1 } }""")
+
       }
 
       "moving an empty object keeps {} at destination (aggressive by default)" in {

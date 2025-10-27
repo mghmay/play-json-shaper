@@ -10,11 +10,11 @@ final class TransformOpsSpec extends AnyFreeSpec with Matchers {
 
   "TransformOps" - {
 
-    "move: moves scalar, overwrites destination, aggressively prunes source" in {
-      val in  = Json.parse("""{ "a": { "b": 1 }, "x": 999 }""").as[JsObject]
+    "move: moves scalar, and maintains destination values, aggressively prunes source" in {
+      val in  = Json.parse("""{ "a": { "b": { "c": 1 } }, "x": { "keep": true } }""").as[JsObject]
       val out = TransformOps.move(__ \ "a" \ "b", __ \ "x").apply(in).toOption.get
 
-      out mustBe Json.parse("""{ "x": 1 }""")
+      out mustBe Json.parse("""{ "x": { "keep": true, "c": 1 } }""")
     }
 
     "move: moving an object deep-merges at destination and preserves unrelated fields" in {
