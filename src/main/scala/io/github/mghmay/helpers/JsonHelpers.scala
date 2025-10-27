@@ -40,7 +40,14 @@ trait JsonHelpers {
             case SourceCleanup.Tombstone  => setNestedPath(from, JsNull, json)
           }
 
-          afterSource.flatMap(withoutOld => setNestedPath(to, value, withoutOld))
+          afterSource.flatMap { withoutOld =>
+            value match {
+              case o: JsObject =>
+                deepMergeAt(withoutOld, to, o)
+              case _ =>
+                setNestedPath(to, value, withoutOld)
+            }
+          }
 
         case _: JsUndefined =>
           Left(
@@ -164,7 +171,11 @@ trait JsonHelpers {
           val child = getChildObj(current, k)
           current + (k -> loop(child, tail))
         case _                      =>
+          // $COVERAGE-OFF$
+          // Unreachable: IdxPathNode is filtered by the `hasArraySeg` pre-check above.
+          // This is just a defensive fallback.
           current
+        // $COVERAGE-ON$
       }
       Right(loop(json, path.path))
     }
@@ -174,12 +185,17 @@ trait JsonHelpers {
   final def setNestedPath(path: JsPath, value: JsValue, json: JsObject): Either[JsError, JsObject] =
     path.path match {
       case Nil                    => Right(json)
-      case KeyPathNode(k) :: Nil  => Right(json + (k -> value))
+      case KeyPathNode(k) :: Nil =>
+        value match {
+          case o: JsObject if o.value.isEmpty =>
+            Right(json - k)
+          case _ =>
+            Right(json + (k -> value))
+        }
       case KeyPathNode(h) :: tail =>
         val child = getChildObj(json, h)
         setNestedPath(JsPath(tail), value, child).map { nested =>
-          val rebuilt = json + (h -> nested)
-          if (nested.value.isEmpty) rebuilt - h else rebuilt
+          json + (h -> nested)
         }
       case _                      =>
         Left(JsError(

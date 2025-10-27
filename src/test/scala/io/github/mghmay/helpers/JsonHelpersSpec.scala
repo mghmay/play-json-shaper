@@ -178,6 +178,83 @@ class JsonHelpersSpec extends AnyFreeSpec with JsonHelpers with Matchers {
       }
     }
 
+    "mapAt" - {
+
+      "applies a successful mapping function (increment int)" in {
+        val in  = Json.parse("""{ "a": { "b": 1 } }""").as[JsObject]
+        val out = mapAt(__ \ "a" \ "b", in) { v =>
+          v.validate[Int].map(n => JsNumber(n + 1))
+        }.toOption.get
+
+        (out \ "a" \ "b").as[Int] mustBe 2
+      }
+
+      "can change type (string -> object) via validator" in {
+        val in = Json.parse("""{ "user": { "name": "Jane Doe" } }""").as[JsObject]
+
+        def splitName(v: JsValue): JsResult[JsValue] =
+          v.validate[String].flatMap {
+            case s if s.trim.split("\\s+").length == 2 =>
+              val Array(first, last) = s.trim.split("\\s+")
+              JsSuccess(Json.obj("first" -> first, "last" -> last))
+            case _ =>
+              JsError(Seq(JsPath() -> Seq(JsonValidationError("expected exactly two parts"))))
+          }
+
+        val out = mapAt(__ \ "user" \ "name", in)(splitName).toOption.get
+
+        (out \ "user" \ "name" \ "first").as[String] mustBe "Jane"
+        (out \ "user" \ "name" \ "last").as[String]  mustBe "Doe"
+      }
+
+      "propagates mapping failure and prefixes error paths with the target path" in {
+        val in = Json.parse("""{ "a": { "name": "Jane" } }""").as[JsObject]
+
+        val vf: JsValue => JsResult[JsValue] =
+          _ => JsError(Seq((__ \ "inner") -> Seq(JsonValidationError("boom"))))
+
+        val left = mapAt(__ \ "a" \ "name", in)(vf).left.get
+        val (badPath, msgs) = left.errors.head
+        badPath mustBe (__ \ "a" \ "name" \ "inner")
+        msgs.head.message must include("boom")
+      }
+
+      "fails with JsError when path does not exist (or not unique)" in {
+        val in = Json.parse("""{ "a": 1 }""").as[JsObject]
+
+        val left = mapAt(__ \ "missing", in)(v => JsSuccess(v)).left.get
+        val (badPath, msgs) = left.errors.head
+        badPath mustBe (__ \ "missing")
+        msgs.head.message.toLowerCase must include("not found")
+      }
+
+      "fails with JsError when path resolves to multiple values (ambiguous)" in {
+        val in = Json.parse("""{ "arr": [ { "b": 1 }, { "b": 2 } ] }""").as[JsObject]
+
+        val left = mapAt(__ \ "arr" \ "b", in)(v => JsSuccess(v)).left.get
+        val (badPath, msgs) = left.errors.head
+        badPath mustBe (__ \ "arr" \ "b")
+        msgs.head.message.toLowerCase must (include("not unique") or include("not found"))
+      }
+
+      "supports mapping to JsNull (keeps the key with a null value)" in {
+        val in  = Json.parse("""{ "a": { "b": 42 } }""").as[JsObject]
+        val out = mapAt(__ \ "a" \ "b", in)(_ => JsSuccess(JsNull)).toOption.get
+
+        (out \ "a" \ "b").toOption mustBe Some(JsNull)
+      }
+
+      "fails when attempting to set into an array segment (unsupported in setNestedPath)" in {
+        val in = Json.parse("""{ "a": [ 1, 2, 3 ] }""").as[JsObject]
+
+        val left = mapAt(__ \ "a" \ 0, in) { v =>
+          v.validate[Int].map(n => JsNumber(n + 10))
+        }.left.get
+
+        left.errors.head._2.head.message.toLowerCase must include("unsupported path")
+      }
+    }
+
     "aggressivePrunePath" - {
 
       "removes a nested key and prunes empty parents" in {
@@ -197,6 +274,42 @@ class JsonHelpersSpec extends AnyFreeSpec with JsonHelpers with Matchers {
         val left = aggressivePrunePath(__ \ "a" \ "missing", in.as[JsObject]).left.get
         left.errors.head._2.head.message must include("path not found")
       }
+
+      "fails when a parent exists but is not an object" in {
+        val in   = Json.parse("""{ "a": 1 }""")
+        val left = aggressivePrunePath(__ \ "a" \ "b", in.as[JsObject]).left.get
+
+        val (badPath, msgs) = left.errors.head
+        badPath mustBe (__ \ "a" \ "b")
+        msgs.head.message must include("expected object at 'a'")
+      }
+
+      "fails when a parent key is missing" in {
+        val in   = Json.parse("""{ }""")
+        val left = aggressivePrunePath(__ \ "a" \ "b", in.as[JsObject]).left.get
+
+        val (badPath, msgs) = left.errors.head
+        badPath mustBe (__ \ "a" \ "b")
+        msgs.head.message.toLowerCase must include("path not found")
+      }
+
+      "fails when path starts with an array segment" in {
+        val in   = Json.parse("""{ "a": [ { "b": 1 } ] }""")
+        val left = aggressivePrunePath(__ \ 0, in.as[JsObject]).left.get
+
+        val (badPath, msgs) = left.errors.head
+        badPath mustBe (__ \ 0)
+        msgs.head.message.toLowerCase must include("arrays not supported")
+      }
+
+      "fails with JsError when given an empty JsPath" in {
+        val in   = Json.parse("""{ "a": { "b": 1 } }""")
+        val left = aggressivePrunePath(JsPath(Nil), in.as[JsObject]).left.get
+
+        val (badPath, msgs) = left.errors.head
+        badPath mustBe JsPath(Nil)
+        msgs.head.message must include ("prune: empty path")
+      }
     }
 
     "gentlePrunePath" - {
@@ -212,6 +325,16 @@ class JsonHelpersSpec extends AnyFreeSpec with JsonHelpers with Matchers {
         val left = gentlePrunePath(__ \ "a" \ "missing", in.as[JsObject]).left.get
         left.errors.head._2.head.message.toLowerCase must include("path not found")
       }
+
+      "fails when pruning an array index" in {
+        val in   = Json.parse("""{ "a": [1, 2, 3] }""").as[JsObject]
+        val left = gentlePrunePath(__ \ "a" \ 0, in).left.get
+
+        val (badPath, msgs) = left.errors.head
+        badPath mustBe (__ \ "a" \ 0)
+        msgs.head.message.toLowerCase must include("arrays not supported")
+      }
+
     }
 
     "deepMergeAt" - {
@@ -258,6 +381,19 @@ class JsonHelpersSpec extends AnyFreeSpec with JsonHelpers with Matchers {
         val out = setNestedPath(JsPath(Nil), JsNumber(2), in.as[JsObject])
         out mustBe Right(in.as[JsObject])
       }
+
+      "removes the key when setting an empty object at a leaf" in {
+        val in  = Json.parse("""{ "a": { "b": 1 }, "x": 9 }""").as[JsObject]
+        val out = setNestedPath(__ \ "a", Json.obj(), in).toOption.get
+        out mustBe Json.parse("""{ "x": 9 }""")
+      }
+
+      "removes only the leaf when setting an empty object at a deep path" in {
+        val in  = Json.parse("""{ "a": { "b": { "c": "x" } } }""").as[JsObject]
+        val out = setNestedPath(__ \ "a" \ "b" \ "c", Json.obj(), in).toOption.get
+        out mustBe Json.parse("""{ "a": { "b": { } } }""")
+      }
+
     }
   }
 }
