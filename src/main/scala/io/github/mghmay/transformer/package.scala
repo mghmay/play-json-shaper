@@ -15,5 +15,4 @@ package object transformer {
   val identity: Transformer = Right(_)
 
   type Predicate = JsObject => Boolean
-  // Try push to main
 }
