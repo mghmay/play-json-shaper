@@ -12,6 +12,11 @@ ThisBuild / scmInfo            := Some(
     "scm:git@github.com:mghmay/play-json-shaper.git"
   )
 )
+ThisBuild / coverageMinimumBranchTotal       := 100
+ThisBuild / coverageMinimumStmtTotal       := 100
+ThisBuild / coverageFailOnMinimum := true
+ThisBuild / coverageHighlighting  := true
+
 headerLicenseStyle             := HeaderLicenseStyle.SpdxSyntax
 Compile / headerSources ++= (Compile / sources).value
 Test / headerSources ++= (Test / sources).value

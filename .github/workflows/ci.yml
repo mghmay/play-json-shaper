@@ -1,0 +1,42 @@
+name: tests-and-coverage
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: sbt/setup-sbt@v1
+
+      - name: Cache ivy / sbt / coursier
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.ivy2/cache
+            ~/.sbt
+            ~/.cache/coursier
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', '**/project/**/*.scala') }}
+
+      - name: Test + Coverage (must be 100%)
+        run: |
+          sbt \
+            "++ 2.13.16" \
+            clean coverage test coverageReport
+          # build fails automatically if coverage < 100 because of build.sbt settings
+
+      - name: Publish coverage artifact (optional)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scoverage-report
+          path: target/scala-2.13/scoverage-report
