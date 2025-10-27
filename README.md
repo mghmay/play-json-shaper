@@ -345,7 +345,6 @@ val transformed = for {
 - Uses `either.toOption.getOrElse(fail("..."))` for success paths, and `either.swap.toOption.getOrElse(fail("..."))` for error paths.
 - Asserts failures by checking `JsError` anchors (paths) and messages.
 - Builder output equality: both fluent and direct compositions create equal outputs.
-- 
 
 ### Test coverage
 
