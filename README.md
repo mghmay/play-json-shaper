@@ -60,7 +60,7 @@ val p1 = JsonTransform.set(__ \ "a", JsNumber(1))
 val p2 = JsonTransform.set(__ \ "b", JsNumber(2))
 val p  = p1 |> p2           // or: p1 ++ p2
 ```
-_(There is also an .andThen extension, but because it can be confused with `Function1#andThen`, prefer |> in docs and code.)_
+_(There is also an `.andThen` extension, but because it can be confused with `Function1#andThen`, prefer |> in docs and code.)_
 
 ### 2) Direct composition (no builder)
 
@@ -184,7 +184,27 @@ This is documented in `JsonHelpers` and `syntax`. The public operations (`move`,
 - **No hidden state**. All pieces are pure functions over `JsObject`.
 - **Default cleanup** for `move` is **Aggressive** (tombstones opt-in).
 - **Pipelines** are highly composable and reusable.
-- This design is based on my work with HMRC where I had to design a small json pipeline and some helper functions
+- This design is based on my work with HMRC where I had to design a small json pipeline and some helper functions.
+
+### Parent creation and replacement
+
+When writing to a nested path, parents are created as objects. **If a parent already exists but isn’t an object, it’s replaced so the write can proceed.**
+
+```scala
+// setNestedPath
+set(__ \ "a" \ "b", JsNumber(2))(Json.obj("a" -> 1))
+// -> Right({ "a": { "b": 2 } })
+
+// deepMergeAt
+mergeAt(__ \ "a" \ "b", Json.obj("x" -> 1))(Json.obj("a" -> 1))
+// -> Right({ "a": { "b": { "x": 1 } } })
+
+```
+
+Also note:
+
+- Setting {} at a leaf keeps the key (it does not delete it).
+- Array path segments (e.g., __ \ "arr" \ 0) are not supported by these helpers and return a JsError.
 
 ---
 
@@ -228,7 +248,7 @@ Our input json, the aim is to transform it in the following ways:
  - user level should be removed
  - name value should be transformed from a full name to an object: {"first", "last"}
  
-In order to do this we will make out own transformers using the transformers provided in
+In order to do this we will make our own transformers using the transformers provided in
 ops as building blocks. 
 */
 
@@ -322,9 +342,30 @@ val transformed = for {
 
 ## Testing
 
-- Asserts success paths with `.toOption.get` on the `Either`.
+- Uses `either.toOption.getOrElse(fail("..."))` for success paths, and `either.swap.toOption.getOrElse(fail("..."))` for error paths.
 - Asserts failures by checking `JsError` anchors (paths) and messages.
-- Builder output equality: both fluent and direct compositions create equal outputs
+- Builder output equality: both fluent and direct compositions create equal outputs.
+- 
+
+### Test coverage
+
+To run test coverage:
+
+```scala
+ sbt clean coverage test coverageReport
+```
+
+Test coverage is enforced at 100%, both branch and statement. PR's can't be merged if less than 100% code coverage.
+  Anything that can't be covered in a test should be marked with `$COVERAGE-OFF$` and then `$COVERAGE-ON$`, a reason as to why should be provided.
+
+Example: 
+```scala
+// $COVERAGE-OFF$
+// Unreachable: IdxPathNode is filtered by the `hasArraySeg` pre-check above.
+// This is just a defensive fallback.
+current
+// $COVERAGE-ON$
+```
 
 ---
 

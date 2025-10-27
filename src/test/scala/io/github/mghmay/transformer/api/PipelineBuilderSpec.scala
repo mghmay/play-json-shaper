@@ -97,7 +97,7 @@ final class PipelineBuilderSpec extends AnyFreeSpec with Matchers {
       val in  = Json.parse("""{ "a": { "b": 1 }, "arr": [] }""").as[JsObject]
       val res = JsonTransform.start.move(__ \ "a" \ "b", __ \ "arr" \ 0).run(in)
       res.isLeft mustBe true
-      val out = res.left.getOrElse(fail("Expected successful transformation"))
+      val out = res.swap.getOrElse(fail("Expected successful transformation"))
         out.errors.head._2.head.message.toLowerCase must include("unsupported path")
     }
 

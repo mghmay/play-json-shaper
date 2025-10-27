@@ -85,7 +85,7 @@ final class SyntaxSpec extends AnyFreeSpec with Matchers {
 
       val left = (in |> step1) |> boom |> step2
       left.isLeft mustBe true
-      val out = left.left.getOrElse(fail("Expected successful transformation"))
+      val out = left.swap.getOrElse(fail("Expected successful transformation"))
         out.errors.head._1 mustBe (__ \ "err")
     }
 

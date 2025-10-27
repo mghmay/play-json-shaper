@@ -27,7 +27,7 @@ final class JsonTransformSpec extends AnyFreeSpec with Matchers {
 
       val res = JsonTransform(failing, wouldSet)(in)
       res.isLeft mustBe true
-      val out = res.left.getOrElse(fail("Expected successful transformation"))
+      val out = res.swap.getOrElse(fail("Expected successful transformation"))
         out.errors.head._1 mustBe (__ \ "oops")
     }
 

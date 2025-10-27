@@ -46,12 +46,12 @@ final class TransformOpsSpec extends AnyFreeSpec with Matchers {
 
     "move: fails when source missing or not unique" in {
       val inMissing = Json.parse("""{ "a": 1 }""").as[JsObject]
-      val left1     = TransformOps.move(__ \ "missing", __ \ "x").apply(inMissing).left.getOrElse(
+      val left1     = TransformOps.move(__ \ "missing", __ \ "x").apply(inMissing).swap.getOrElse(
         fail("Expected successful transformation"))
       left1.errors.head._1 mustBe (__ \ "missing")
 
       val inAmbig = Json.parse("""{ "arr": [ { "b": 1 }, { "b": 2 } ] }""").as[JsObject]
-      val left2   = TransformOps.move(__ \ "arr" \ "b", __ \ "x").apply(inAmbig).left.getOrElse(
+      val left2   = TransformOps.move(__ \ "arr" \ "b", __ \ "x").apply(inAmbig).swap.getOrElse(
         fail("Expected successful transformation"))
       left2.errors.head._1 mustBe (__ \ "arr" \ "b")
     }
@@ -85,9 +85,9 @@ final class TransformOpsSpec extends AnyFreeSpec with Matchers {
       (out \ "ctx" \ "version").as[Int] mustBe 3
 
       val in2  = Json.parse("""{ "a": [ { "b": 1 } ] }""").as[JsObject]
-      val left = TransformOps.mergeAt(__ \ "a" \ 0 \ "b", Json.obj("x" -> 2))(in2).left.getOrElse(
+      val left = TransformOps.mergeAt(__ \ "a" \ 0 \ "b", Json.obj("x" -> 2))(in2).swap.getOrElse(
         fail("Expected successful transformation"))
-      left.errors.head._2.head.message.toLowerCase must include("idxpathnode")
+      left.errors.head._2.head.message.toLowerCase must include("arrays not supported")
     }
 
     "pruneAggressive: removes target and empties parents; errors bubble out" in {
@@ -99,14 +99,14 @@ final class TransformOpsSpec extends AnyFreeSpec with Matchers {
 
     "pruneAggressive: fails when parent is not an object" in {
       val inBad = Json.parse("""{ "a": { "b": 1 }, "arr": [] }""").as[JsObject]
-      val left  = TransformOps.pruneAggressive(__ \ "arr" \ 0)(inBad).left.getOrElse(
+      val left  = TransformOps.pruneAggressive(__ \ "arr" \ 0)(inBad).swap.getOrElse(
         fail("Expected successful transformation"))
       left.errors.head._2.head.message must include("prune: expected object at 'arr'")
     }
 
     "pruneAggressive: fails when path starts with an array segment (unsupported)" in {
       val inBadRoot = Json.parse("""{ "a": { "b": 1 }, "arr": [] }""").as[JsObject]
-      val left2     = TransformOps.pruneAggressive(__ \ 0)(inBadRoot).left.getOrElse(
+      val left2     = TransformOps.pruneAggressive(__ \ 0)(inBadRoot).swap.getOrElse(
         fail("Expected successful transformation"))
       left2.errors.head._2.head.message.toLowerCase must include("arrays not supported")
     }
@@ -118,7 +118,7 @@ final class TransformOpsSpec extends AnyFreeSpec with Matchers {
       out mustBe Json.parse("""{ "a": { "b": { } } }""")
 
       val inBad = Json.parse("""{ "a": { "b": 1 } }""").as[JsObject]
-      val left  = TransformOps.pruneGentle(__ \ "a" \ "missing")(inBad).left.getOrElse(
+      val left  = TransformOps.pruneGentle(__ \ "a" \ "missing")(inBad).swap.getOrElse(
         fail("Expected successful transformation"))
       left.errors.head._2.head.message.toLowerCase must include("path not found")
     }
@@ -142,7 +142,7 @@ final class TransformOpsSpec extends AnyFreeSpec with Matchers {
 
       val inBad = Json.parse("""{ "x": "not-int" }""").as[JsObject]
       val left  = TransformOps.mapAt(__ \ "x")(v => v.validate[Int].map(i => JsNumber(i + 1)))(
-        inBad).left.getOrElse(fail("Expected successful transformation"))
+        inBad).swap.getOrElse(fail("Expected successful transformation"))
       left.errors.head._1 mustBe (__ \ "x")
     }
 
@@ -179,10 +179,10 @@ final class TransformOpsSpec extends AnyFreeSpec with Matchers {
 
       viaFor mustBe viaFluent
       val viaForOut    = viaFor.toOption.getOrElse(fail("Expected successful transformation"))
-      val viaVluentOut = viaFluent.toOption.getOrElse(fail("Expected successful transformation"))
+      val viaFluentOut = viaFluent.toOption.getOrElse(fail("Expected successful transformation"))
 
       (viaForOut \ "person" \ "name").as[String] mustBe "adA"
-      (viaVluentOut \ "meta" \ "ok").as[Boolean] mustBe true
+      (viaFluentOut \ "meta" \ "ok").as[Boolean] mustBe true
     }
   }
 }

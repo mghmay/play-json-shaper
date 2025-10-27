@@ -25,6 +25,9 @@ trait JsonHelpers {
     *
     * Overlapping paths are well-defined (capture, cleanup, set). If 'to' is a descendant of 'from' and
     * cleanup is Tombstone, the tombstone may be replaced when writing to 'to' (parents are recreated).
+    *
+    * Moving an object deep-merges at the destination; intermediate non-object parents are replaced with
+    * objects as per deepMergeAt semantics.
     */
   final def movePath(
       from: JsPath,
@@ -107,7 +110,7 @@ trait JsonHelpers {
     def loop(cur: JsObject, nodes: List[PathNode]): Either[JsError, JsObject] = nodes match {
       case KeyPathNode(k) :: Nil =>
         if (cur.keys.contains(k)) Right(cur - k)
-        else Left(JsError(Seq(path -> Seq(JsonValidationError("prune: path not found")))))
+        else Left(JsError(Seq(path -> Seq(JsonValidationError("aggressivePrunePath: path not found")))))
 
       case KeyPathNode(parent) :: rest =>
         (cur \ parent).toOption match {
@@ -116,18 +119,18 @@ trait JsonHelpers {
               if (prunedChild.value.isEmpty) cur - parent else cur + (parent -> prunedChild)
             }
           case Some(_)               =>
-            Left(JsError(Seq(path -> Seq(JsonValidationError(s"prune: expected object at '$parent'")))))
+            Left(JsError(Seq(path -> Seq(JsonValidationError(s"aggressivePrunePath: expected object at '$parent'")))))
           case None                  =>
-            Left(JsError(Seq(path -> Seq(JsonValidationError("prune: path not found")))))
+            Left(JsError(Seq(path -> Seq(JsonValidationError("aggressivePrunePath: path not found")))))
         }
 
       case _ =>
         Left(JsError(
-            Seq(path -> Seq(JsonValidationError("prune: unsupported path segment (arrays not supported)")))))
+            Seq(path -> Seq(JsonValidationError("aggressivePrunePath: unsupported path segment (arrays not supported)")))))
     }
 
     path.path match {
-      case Nil => Left(JsError(Seq(path -> Seq(JsonValidationError("prune: empty path")))))
+      case Nil => Left(JsError(Seq(path -> Seq(JsonValidationError("aggressivePrunePath: empty path")))))
       case ns  => loop(json, ns)
     }
   }
@@ -138,13 +141,13 @@ trait JsonHelpers {
   final def gentlePrunePath(path: JsPath, json: JsObject): Either[JsError, JsObject] = {
     path.asSingleJson(json) match {
       case _: JsUndefined =>
-        Left(JsError(Seq(path -> Seq(JsonValidationError("prune: path not found")))))
+        Left(JsError(Seq(path -> Seq(JsonValidationError("gentlePrunePath: path not found")))))
       case JsDefined(_)   =>
         path.prune(json) match {
           case JsSuccess(updated, _) => Right(updated)
           case JsError(_)            =>
             Left(JsError(Seq(path -> Seq(
-                  JsonValidationError("prune: path not found or unsupported (arrays not supported)")
+                  JsonValidationError("gentlePrunePath: path not found or unsupported (arrays not supported)")
                 ))))
         }
     }
@@ -153,9 +156,27 @@ trait JsonHelpers {
   private def getChildObj(current: JsObject, k: String) =
     (current \ k).toOption.collect { case o: JsObject => o }.getOrElse(Json.obj())
 
-  /** Deep-merge a JsObject at path, creating parents as needed. Fails with JsError if the path contains array
-    * indices (IdxPathNode).
+  /** Deep-merge a JsObject at path, creating parents as needed.
+    *
+    * Semantics
+    *   - Creates any missing parents as empty objects.
+    *   - If a parent exists but is not a JsObject, it is **replaced** with a new JsObject so the merge can
+    *     proceed at the target.
+    *   - At the target node, performs a deep merge (object fields are merged; non-conflicting keys are
+    *     preserved). Array segments (IdxPathNode) are not supported.
+    *
+    * Examples:
+    * {{{
+    * // Replace a scalar parent and merge at a deeper node: //
+    * { "a": 1 } -> deepMergeAt(__ \ "a" \
+    * "b", { "x": 1 }) // becomes { "a": { "b": { "x": 1 } } }
+    *
+    * // Merge into existing object: //
+    * { "ctx": { "env": "dev" } } + mergeAt(__ \ "ctx", { "version": 3 }) //
+    * -> { "ctx": { "env": "dev", "version": 3 } }
+    * }}}
     */
+
   final def deepMergeAt(json: JsObject, path: JsPath, value: JsObject): Either[JsError, JsObject] = {
     val hasArraySeg = path.path.exists {
       case _: IdxPathNode => true
@@ -163,7 +184,7 @@ trait JsonHelpers {
     }
     if (hasArraySeg)
       Left(JsError(Seq(path -> Seq(
-            JsonValidationError("deepMergeAt: array segments (IdxPathNode) not supported at this time")))))
+            JsonValidationError("deepMergeAt: unsupported path segment (arrays not supported)")))))
     else {
       def loop(current: JsObject, nodes: List[PathNode]): JsObject = nodes match {
         case Nil                    =>
@@ -182,7 +203,26 @@ trait JsonHelpers {
     }
   }
 
-  /** Recursive set that builds parent objects as needed. */
+  /** Recursive set that builds parent objects as needed.
+    *
+    * Semantics
+    *   - Creates any missing parents as empty objects.
+    *   - If a parent exists but is not a JsObject (e.g., number/string/bool/null), it is **replaced** with a
+    *     new JsObject to allow descending to the target leaf.
+    *   - Setting an empty object `{}` at a leaf **keeps** the key (does not remove it).
+    *   - Array segments (IdxPathNode) are not supported and return a JsError.
+    *
+    * Examples
+    * {{{
+    * // Replace a scalar parent with an object to set a deeper field: //
+    * { "a": 1 } ->
+    * setNestedPath(__ \ "a" \ "b", 2) -> { "a": { "b": 2 } }
+    *
+    * // Create missing parents: //
+    * { } -> setNestedPath(__ \ "x" \ "y", 1) -> { "x": { "y": 1 } }
+    * }}}
+    */
+
   final def setNestedPath(path: JsPath, value: JsValue, json: JsObject): Either[JsError, JsObject] =
     path.path match {
       case Nil                    => Right(json)
@@ -194,6 +234,7 @@ trait JsonHelpers {
         }
       case _                      =>
         Left(JsError(
-            Seq(path -> Seq(JsonValidationError("set: unsupported path segment (arrays not supported)")))))
+            Seq(path -> Seq(
+              JsonValidationError("setNestedPath: unsupported path segment (arrays not supported)")))))
     }
 }
