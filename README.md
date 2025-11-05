@@ -1,5 +1,8 @@
 # play-json-shaper
 
+[![codecov](https://codecov.io/gh/mghmay/play-json-shaper/branch/main/graph/badge.svg)](https://codecov.io/gh/mghmay/play-json-shaper)
+
+
 Tiny, opinionated helpers for building **pure**, **composable** JSON transformations on top of Play JSON.
 
 - Two ways to build pipelines: **fluent** or **direct composition**
