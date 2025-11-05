@@ -41,3 +41,10 @@ jobs:
         with:
           name: scoverage-report
           path: target/scala-2.13/scoverage-report
+
+      - name: Upload to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: target/scala-2.13/scoverage-report/scoverage.xml
+
