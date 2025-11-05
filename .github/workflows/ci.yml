@@ -37,10 +37,10 @@ jobs:
 
       - name: Publish coverage artifact (optional)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: scoverage-report
-          path: target/scala-2.13/scoverage-report
+          path: target/scala-*/scoverage-report
 
       - name: Upload to Codecov
         if: always()
