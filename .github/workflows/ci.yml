@@ -35,7 +35,7 @@ jobs:
             clean coverage test coverageReport
           # build fails automatically if coverage < 100 because of build.sbt settings
 
-      - name: Publish coverage artifact (optional)
+      - name: Publish coverage artifact
         if: always()
         uses: actions/upload-artifact@v5
         with:
