@@ -16,6 +16,8 @@ ThisBuild / coverageMinimumBranchTotal := 100
 ThisBuild / coverageMinimumStmtTotal   := 100
 ThisBuild / coverageFailOnMinimum      := true
 ThisBuild / coverageHighlighting       := true
+ThisBuild / versionScheme := Some("semver-spec")
+
 
 headerLicenseStyle := HeaderLicenseStyle.SpdxSyntax
 Compile / headerSources ++= (Compile / sources).value
