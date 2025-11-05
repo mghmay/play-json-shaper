@@ -3,6 +3,7 @@
 [![codecov](https://codecov.io/gh/mghmay/play-json-shaper/branch/main/graph/badge.svg)](https://codecov.io/gh/mghmay/play-json-shaper)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.mghmay/play-json-shaper_2.13.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/io.github.mghmay/play-json-shaper_2.13)
 [![Scaladex](https://index.scala-lang.org/mghmay/play-json-shaper/play-json-shaper/latest.svg?target=2.13)](https://index.scala-lang.org/mghmay/play-json-shaper/play-json-shaper)
+[![CI](https://github.com/scalacenter/scaladex/actions/workflows/ci.yml/badge.svg)](https://github.com/scalacenter/scaladex/actions/workflows/ci.yml)
 
 
 Tiny, opinionated helpers for building **pure**, **composable** JSON transformations on top of Play JSON.
