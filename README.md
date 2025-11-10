@@ -54,9 +54,14 @@ val pipeline =
     .copy(__ \ "ctx", __ \ "copied")
     .build
 
-val in  = Json.obj("old" -> "hello", "ctx" -> Json.obj("env" -> "dev"))
+val in  = Json.obj("old" -> "hello",
+  "ctx" -> Json.obj("env" -> "dev"),
+  "keep" -> Json.obj("delete" -> "me"),
+  "delete" -> Json.obj("delete" -> "me"))
 val out = pipeline(in)
-// Either[JsError, JsObject]
+/* Right({"ctx":{"env":"dev","version":7},
+ "keep":{},"new":"HELLO",
+ "copied":{"env":"dev","version":7}}) */
 ```
 
 You can also compose pipelines:
@@ -73,13 +78,15 @@ _(There is also an `.andThen` extension, but because it can be confused with `Fu
 Compose plain functions when that reads nicer (for-comprehensions, lists, etc.):
 
 ```scala
+val in = Json.obj("a" -> Json.obj("name" -> "Ada"))
+
 val viaFor = for {
-  j1 <- move(__ \ "a" \ "name", __ \ "person" \ "name")
-    (Json.obj("a" -> Json.obj("name" -> "Ada")))
-  j2 <- mapAt(__ \ "person" \ "name")
-    (v => v.validate[String].map(n => JsString(n.reverse)))(j1)
-  j3 <- mergeAt(__ \ "meta", Json.obj("ok" -> true))(j2)
+  j1 <- in |> move(__ \ "a" \ "name", __ \ "person" \ "name")
+  j2 <- j1 |> mapAt(__ \ "person" \ "name")
+  (v => v.validate[String].map(n => JsString(n.reverse)))
+  j3 <- j2 |> mergeAt(__ \ "meta", Json.obj("ok" -> true))
 } yield j3
+// Right({"person":{"name":"adA"},"meta":{"ok":true}})
 ```
 
 Or use `JsonTransform.apply`/`compose` to fold a sequence of steps:
